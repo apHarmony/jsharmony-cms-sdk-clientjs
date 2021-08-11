@@ -56,27 +56,27 @@ jsHarmony CMS SDK for Client-side JS
 ## *jsHarmonyCmsClient Class*
 
 * [Constructor](#constructor)
-* Public Properties
-   * [onError](#onError)
-   * [onRouteNotFound](#onRouteNotFound)
-   * [onPageRender](#onPageRender)
-   * [onPageRendered](#onPageRendered)
-   * [onPageDestroy](#onPageDestroy)
-   * [onLinkClick](#onLinkClick)
-   * [onSaveState](#onSaveState)
-   * [onRestoreState](#onRestoreState)
-* Public Methods
-   * [Router](#Router)
-   * [Standalone](#Standalone)
-   * [isInEditor](#isInEditor)
+* *Public Properties*
+   * [onError](#onerror)
+   * [onRouteNotFound](#onroutenotfound)
+   * [onPageRender](#onpagerender)
+   * [onPageRendered](#onpagerendered)
+   * [onPageDestroy](#onpagedestroy)
+   * [onLinkClick](#onlinkclick)
+   * [onSaveState](#onsavestate)
+   * [onRestoreState](#onrestorestate)
+* *Public Methods*
+   * [Router](#router)
+   * [Standalone](#standalone)
+   * [isInEditor](#isineditor)
    * [resolve](#resolve)
    * [render](#render)
    * [route](#route)
-   * [getPageData](#getPageData)
-   * [getRedirectData](#getRedirectData)
-   * [renderPage](#renderPage)
-   * [matchRedirect](#matchRedirect)
-   * [bindLinks](#bindLinks)
+   * [getPageData](#getpagedata)
+   * [getRedirectData](#getredirectdata)
+   * [renderPage](#renderpage)
+   * [matchRedirect](#matchredirect)
+   * [bindLinks](#bindlinks)
 
 ---
 
