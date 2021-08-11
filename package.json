@@ -1,8 +1,8 @@
 {
   "name": "jsharmony-cms-sdk-clientjs",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "jsHarmony CMS SDK for Client-side JS",
-  "main": "index.js",
+  "main": "jsHarmonyCmsClient.js",
   "scripts": {
     "build": "uglifyjs jsHarmonyCmsClient.js --comments /^!/ > jsHarmonyCmsClient.min.js",
     "test": "mocha --reporter spec"
@@ -27,10 +27,8 @@
     "url": "https://github.com/apHarmony/jsharmony-cms-sdk-clientjs/issues"
   },
   "homepage": "https://github.com/apHarmony/jsharmony-cms-sdk-clientjs",
-  "devDependencies": {
-  },
-  "dependencies": {
-  },
+  "devDependencies": {},
+  "dependencies": {},
   "bin": {
     "jsharmony-cms-sdk-clientjs": "./jsHarmonyCmsClient.js"
   }
