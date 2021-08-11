@@ -1,0 +1,37 @@
+{
+  "name": "jsharmony-cms-sdk-clientjs",
+  "version": "1.0.1",
+  "description": "jsHarmony CMS SDK for Client-side JS",
+  "main": "index.js",
+  "scripts": {
+    "build": "uglifyjs jsHarmonyCmsClient.js --comments /^!/ > jsHarmonyCmsClient.min.js",
+    "test": "mocha --reporter spec"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/apHarmony/jsharmony-cms-sdk-clientjs"
+  },
+  "keywords": [
+    "jsHarmony",
+    "CMS",
+    "content",
+    "SDK",
+    "JavaScript",
+    "JS",
+    "Native",
+    "Vanilla"
+  ],
+  "author": "apHarmony <contact@apharmony.com> (http://www.apharmony.com/)",
+  "license": "LGPL-3.0",
+  "bugs": {
+    "url": "https://github.com/apHarmony/jsharmony-cms-sdk-clientjs/issues"
+  },
+  "homepage": "https://github.com/apHarmony/jsharmony-cms-sdk-clientjs",
+  "devDependencies": {
+  },
+  "dependencies": {
+  },
+  "bin": {
+    "jsharmony-cms-sdk-clientjs": "./jsHarmonyCmsClient.js"
+  }
+}
