@@ -198,6 +198,8 @@ cmsClient.onRestoreState = function(url){ cmsClient.route(url); }
 ---
 
 ### Router
+`<jsHarmonyCmsClient>.Router(url)`
+
 *Main Entry Point* - Run CMS Router
 #### Parameters
 * `url: (string)` *(Optional)* CMS Page URL
@@ -212,6 +214,8 @@ cmsClient.Router();
 ---
 
 ### Standalone
+`<jsHarmonyCmsClient>.Standalone(url)`
+
 *Main Entry Point* - Load Standalone CMS Content
 #### Parameters:
 * `url: (string)` *(Optional)* CMS Page URL
@@ -226,6 +230,8 @@ cmsClient.Standalone('/login/');
 ---
 
 ### isInEditor
+`<jsHarmonyCmsClient>.isInEditor()`
+
 Checks whether the page is in CMS Edit mode
 
 #### Parameters
@@ -242,6 +248,8 @@ if(cmsClient.isInEditor()) alert('Opened from CMS Editor');
 ---
 
 ### resolve
+`<jsHarmonyCmsClient>.resolve(url, options)`
+
 Converts URL to CMS Content Path
 #### Parameters
 * `url: (string)` *(Optional)* CMS Page URL
@@ -267,6 +275,8 @@ var contentPath = cmsClient.resolve();
 ---
 
 ### render
+`<jsHarmonyCmsClient>.render(url, options, callback)`
+
 Get CMS Content and Render
 #### Parameters
 * `url: (string)` *(Optional)* CMS Page URL
@@ -291,6 +301,8 @@ cmsClient.render();
 ---
 
 ### route
+`<jsHarmonyCmsClient>.route(url, options, callback)`
+
 Run client-side CMS router on the target URL
 #### Parameters
 * `url: (string)` *(Optional)* CMS Page URL
@@ -319,6 +331,8 @@ cmsClient.route();
 ---
 
 ### getPageData
+`<jsHarmonyCmsClient>.getPageData(url, options, callback)`
+
 Get CMS Page Data
 #### Parameters
 * `url: (string)` *(Optional)* CMS Page URL
@@ -343,6 +357,8 @@ var page = cmsClient.getPageData();
 ---
 
 ### getRedirectData
+`<jsHarmonyCmsClient>.getRedirectData(options, callback)`
+
 Get CMS Redirect Data
 
 Requires `config.redirect_listing_path` to be defined
@@ -363,6 +379,8 @@ var cmsRedirects = cmsClient.getRedirectData();
 ---
 
 ### renderPage
+`<jsHarmonyCmsClient>.renderPage(page, options, callback)`
+
 Render CMS Page
 #### Parameters
 * `page: (Page)` CMS Page Data Object (from getPageData function)
@@ -382,6 +400,8 @@ cmsClient.renderPage(page);
 ---
 
 ### matchRedirect
+`<jsHarmonyCmsClient>.matchRedirect(redirects, url)`
+
 Check if URL matches redirects and return first match
 #### Parameters
 * `redirects: Array(object)` Array of CMS Redirects (from getRedirectData function)
@@ -407,6 +427,8 @@ if(redirect && ((redirect.http_code=='301') || (redirect.http_code=='302'))){
 ---
 
 ### bindLinks
+`<jsHarmonyCmsClient>.bindLinks(obj)`
+
 Bind links in container to the single-page CMS router
 #### Parameters
 * `obj: (DOM Node)` Container whose links will be bound to the CMS Router

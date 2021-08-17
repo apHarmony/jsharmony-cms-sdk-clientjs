@@ -19,15 +19,15 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
 ;(function(){
 
   var jsHarmonyCmsClient = (function(){
-    function jsHarmonyCmsClient(clientParams){
+    function jsHarmonyCmsClient(config){
       var _this = this;
       var _GET = {};
 
       //==========
       //Parameters
       //==========
-      clientParams = extend({
-        access_keys: [],                //Array(string) CMS Editor Access Keys
+      config = extend({
+        access_keys: [],                //Array(string) CMS Editor Access Keys (set to '*' to disable access key check)
         page_files_path: '/',           //(string) URL to page files
         redirect_listing_path: null,    //(string) URL to redirect listing JSON file
         default_document: 'index.html', //(string) Default Directory Document
@@ -35,7 +35,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         cms_templates: ['*'],           //Array(string) List of Page Template Names supported by this instance, or use '*' for all
         bind_routing_events: true,      //(bool) Whether to auto-bind the routing events (link click, browser back / forward buttons) for single-page functionality
         footer_container: null,         //(string) CSS Selector - If set, use an element ID to insert page.footer content, instead of appending to the end of the page
-      }, clientParams);
+      }, config);
 
       //=================
       //Public Properties
@@ -52,7 +52,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
       //=================
       //Private Properties
       //=================
-      extend(this, clientParams);
+      extend(this, config);
 
       this.liveRenderActive = false;
       this.liveRenderTriggers = [];
@@ -229,6 +229,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         page = page || {};
         page.content = page.content || {};
         page.properties = page.properties || {};
+        page.seo = page.seo || {};
         _this.onPageRender(page);
         _this.liveRender(
           function(){ if(document && document.head) return [document.head]; return []; },
@@ -642,6 +643,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         var foundMatch = false;
         _this.eachParallel(_this.access_keys, function(test_key, idx, validate_cb){
           var test_key = (test_key||'').toString();
+          if(test_key == '*'){ foundMatch = true; return validate_cb(); }
           if(!test_key || (test_key.length < 64)) return validate_cb();
           var test_domain_hash = test_key.substr(32);
           var test_salt = '';
@@ -904,6 +906,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         var script = document.createElement('script');
         if(cb) script.onload = cb;
         script.src = url;
+        if(script.classList) script.classList.add('removeOnPublish');
         document.head.appendChild(script);
       }
 
