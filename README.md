@@ -3,53 +3,7 @@ jsHarmony CMS SDK for Client-side JS
 
 ## Installation
 
-1. Download "jsHarmonyCmsClient.min.js" to your project
-
-2. Add a "catchall" page to your web server.  For example, with Apache / htaccess:
-
-   ```apacheconf
-   RewriteRule ^(.*)$ default_page.html [L,QSA]
-   ```
-
-3. Add the jsHarmonyCmsClient.min.js script to your new page:
-
-   ```html
-   <script type="text/javascript" src="jsHarmonyCmsClient.min.js"></script>
-   ```
-
-3. Configure the Deployment Target in the jsHarmony CMS:
-
-   a. In the jsHarmony CMS, open the "Sites" tab
-
-   b. Click "Configure Site" on the target site
-
-   c. Add a new Deployment Target
-
-   d. Set the "URL Prefix" to the folder where the content will be published, for example "/content/"
-
-   e. Set the "Override Page URL Prefix" to the root of the site, for example "/"
-
-   
-4. Copy the integration code from the jsHarmony CMS:
-
-   a. In the jsHarmony CMS, open the "Sites" tab
-
-   b. Click "Configure Site" on the target site
-
-   c. Click "Edit" on the depoyment target
-
-   d. Select the "Integration Code" tab
-
-   e. Copy the Integration Code into your page, for example:
-
-   ```html
-   <script type="text/javascript">
-   var cmsClient = new jsHarmonyCmsClient({"page_files_path":"/content/","access_keys":["xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"]});
-   cmsClient.Router();
-   </script>
-   ```
-   
-5. Publish the content to the target folder, and test
+Installation and integration instructions are available at [jsHarmonyCMS.com](https://www.jsharmonycms.com/resources/integrations/client-side-js/)
 
 ## API Documentation
 
@@ -89,7 +43,7 @@ new jsHarmonyCmsClient(config)
 #### Arguments
 
 - `config` (Object) :: Object with one or more of the configuration keys below:
-```js
+```less
 {
   access_keys: [],                //Array(string) CMS Editor Access Keys
   page_files_path: '/',           //(string) URL to page files
@@ -104,7 +58,7 @@ new jsHarmonyCmsClient(config)
 
 #### Example
 ```js
-var cmsClient = new jsHarmonyCmsClient({ access_keys: ['xxxxxxxxx'] });
+var cmsClient = new jsHarmonyCmsClient({ access_keys: ['*****ACCESS_KEY*****'] });
 ```
 
 ---
@@ -124,11 +78,11 @@ cmsClient.onError = function(err){ console.error(err.message); };
 ---
 
 ### onRouteNotFound
-`function(url, callback){ }`
+`function(url){ }`
 
 Function executed when a matching route is not found for the URL
 ```js
-cmsClient.onRouteNotFound = function(url, callback){ cmsClient.generate404(callback); };
+cmsClient.onRouteNotFound = function(url){ cmsClient.generate404(); };
 ```
 
 ---
@@ -256,7 +210,7 @@ Converts URL to CMS Content Path
 
    Use Full URL, Root-relative URL, or leave blank to use current URL
 * `options: (object)` *(Optional)* Options
-   ```js
+   ```less
    {
       // Whether to try URL variations (adding "/", "/<default_document>")
       strictUrlResolution: (bool), 
@@ -275,7 +229,7 @@ var contentPath = cmsClient.resolve();
 ---
 
 ### render
-`<jsHarmonyCmsClient>.render(url, options, callback)`
+`<jsHarmonyCmsClient>.render(url, options)`
 
 Get CMS Content and Render
 #### Parameters
@@ -283,7 +237,7 @@ Get CMS Content and Render
 
    Use Full URL, Root-relative URL, or leave blank to use current URL
 * `options: (object)` *(Optional)* Options
-   ```js
+   ```less
    {
       // Whether to execute HTTP requests synchronously (blocking)
       async: (bool),   
@@ -292,7 +246,8 @@ Get CMS Content and Render
       onGetPageData: function(err){ /* return false to cancel page render */ }
    }
    ```
-* `callback: function(err){ }` *(Optional)* Callback function executed on error or completion
+#### Returns
+`Promise` 
 #### Example
 ```js
 cmsClient.render();
@@ -301,7 +256,7 @@ cmsClient.render();
 ---
 
 ### route
-`<jsHarmonyCmsClient>.route(url, options, callback)`
+`<jsHarmonyCmsClient>.route(url, options)`
 
 Run client-side CMS router on the target URL
 #### Parameters
@@ -309,7 +264,7 @@ Run client-side CMS router on the target URL
 
    Use Full URL, Root-relative URL, or leave blank to use current URL
 * `options: (object)` *(Optional)* Options
-   ```js
+   ```less
    {
       // Whether to execute HTTP requests synchronously (blocking)
       async: (bool),
@@ -321,7 +276,8 @@ Run client-side CMS router on the target URL
       loadingOverlay: (bool)
    }
    ```
-* `callback: function(err){ }` *(Optional)* Callback function executed on error or completion
+#### Returns
+`Promise` 
 #### Example
 ```js
 cmsClient.route();
@@ -331,7 +287,7 @@ cmsClient.route();
 ---
 
 ### getPageData
-`<jsHarmonyCmsClient>.getPageData(url, options, callback)`
+`<jsHarmonyCmsClient>.getPageData(url, options)`
 
 Get CMS Page Data
 #### Parameters
@@ -339,7 +295,7 @@ Get CMS Page Data
 
    Use Full URL, Root-relative URL, or leave blank to use current URL
 * `options: (object)` *(Optional)* Options
-   ```js
+   ```less
    {
       // Whether to execute HTTP requests synchronously (blocking)
       async: (bool),
@@ -348,50 +304,80 @@ Get CMS Page Data
       variation: (int)
    }
    ```
-* `callback: function(err, rslt){ }` *(Optional)* Callback function executed on error or completion
+#### Returns
+`Promise<Page>`
+```less
+Page {
+  seo: {
+      title: (string),   //Title for HEAD tag
+      keywords: (string),
+      metadesc: (string),
+      canonical_url: (string)
+  },
+  css: (string),
+  js: (string),
+  header: (string),
+  footer: (string),
+  title: (string),      //Title for Page Body Content
+  content: {
+      <content_area_name>: <content> (string)
+  },
+  properties: {
+      <property_name>: <property_value>
+  }
+}
+```
 #### Example
 ```js
-var page = cmsClient.getPageData();
+var page = await cmsClient.getPageData();
 ```
 
 ---
 
 ### getRedirectData
-`<jsHarmonyCmsClient>.getRedirectData(options, callback)`
+`<jsHarmonyCmsClient>.getRedirectData(options)`
 
 Get CMS Redirect Data
 
 Requires `config.redirect_listing_path` to be defined
 #### Parameters
 * `options: (object)` *(Optional)* Options
-   ```js
+   ```less
    {
       // Whether to execute HTTP requests synchronously (blocking)
       async: (bool),
    }
    ```
-* `callback: function(err, rslt){ }` *(Optional)* Callback function executed on error or completion
+#### Returns
+`Promise<Array<Redirect>>`
+```less
+Redirect {
+    http_code: (string) '301', '302', or 'PASSTHRU',
+    url: (string) 'destination/url',
+}
+```
 #### Example
 ```js
-var cmsRedirects = cmsClient.getRedirectData();
+var cmsRedirects = await cmsClient.getRedirectData();
 ```
 
 ---
 
 ### renderPage
-`<jsHarmonyCmsClient>.renderPage(page, options, callback)`
+`<jsHarmonyCmsClient>.renderPage(page, options)`
 
 Render CMS Page
 #### Parameters
 * `page: (Page)` CMS Page Data Object (from getPageData function)
 * `options: (object)` *(Optional)* Options
-   ```js
+   ```less
    {
       // Whether to route links in content areas using single-page JS
       bindLinks: (bool)
    }
    ```
-* `callback: function(){ }` *(Optional)* Callback function executed on completion
+#### Returns
+`Promise`
 #### Example
 ```js
 cmsClient.renderPage(page);
@@ -409,9 +395,9 @@ Check if URL matches redirects and return first match
 
    Use Full URL, Root-relative URL, or leave blank to use current URL
 #### Returns
-`(object)` Redirect Data
-```js
-{
+`(Redirect)` Redirect Data
+```less
+Redirect {
   http_code: '301', '302', or 'PASSTHRU',
   url: '<destination url>'
 }

@@ -19,6 +19,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
 ;(function(){
 
   var jsHarmonyCmsClient = (function(){
+    require('./Promise.polyfill.js');
     function jsHarmonyCmsClient(config){
       var _this = this;
       var _GET = {};
@@ -41,7 +42,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
       //Public Properties
       //=================
       this.onError = function(err){ console.error(err.message); };  //function(err){ }
-      this.onRouteNotFound = function(url, callback){ _this.generate404(callback); }; //function(url, callback){ }
+      this.onRouteNotFound = function(url){ _this.generate404(); }; //function(url){ }
       this.onPageRender = function(){} //function(page){ }
       this.onPageRendered = function(){} //function(page){ }
       this.onPageDestroy = function(){} //function(){ }
@@ -71,7 +72,6 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
       this.onInit = function(){
         _GET = _this.parseGET();
         if(!_this.isInEditor()) _this.appendRenderCss();
-        if(!document.body) return setTimeout(function(){ _this.onInit(); }, 1);
         if(_this.isInEditor()) _this.initEditor();
       }
 
@@ -94,7 +94,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
       //         Use Full URL, Root-relative URL, or leave blank to use current URL
       this.Standalone = function(url){
         if(_this.isInEditor()) return;
-        _this.render(url, { async: false });
+        _this.render(url, { async: false }, function(err){});
       }
 
       //Returns true if page is opened from CMS Editor
@@ -152,25 +152,32 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
       //         Use Full URL, Root-relative URL, or leave blank to use current URL
       //  options: (object) { async: (bool), variation: (int) }
       //  callback: function(err, rslt){}
+      //Returns: Promise<Page>
       this.getPageData = function(orig_url, options, callback){
-        if(!callback) callback = function(err, rslt){ if(err) return _this.onError(err); };
-        options = _this.extend({
-          async: true,
-          variation: 1,
-        }, options);
-        var url = orig_url;
-        try{
-          url = _this.resolve(url, options);
-        }
-        catch(ex){
-          return callback(ex);
-        }
-        _this.getJSON(url, { async: options.async }, function(err, rslt){
-          if(err && err.message && (err.message.indexOf('Error 404:')==0)){
-            options.variation++;
-            return _this.getPageData(orig_url, options, callback);
+        return new Promise(function(resolve, reject){
+          if(!callback) callback = function(err, page){
+            if(err){ _this.onError(err); return reject(err); }
+            return resolve(page);
+          };
+          else resolve();
+          options = _this.extend({
+            async: true,
+            variation: 1,
+          }, options);
+          var url = orig_url;
+          try{
+            url = _this.resolve(url, options);
           }
-          return callback(err, rslt);
+          catch(ex){
+            return callback(ex);
+          }
+          _this.getJSON(url, { async: options.async }, function(err, rslt){
+            if(err && err.message && (err.message.indexOf('Error 404:')==0)){
+              options.variation++;
+              return _this.getPageData(orig_url, options, callback);
+            }
+            return callback(err, rslt);
+          });
         });
       }
 
@@ -178,19 +185,26 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
       //Parameters:
       //  options: (object) { async: (bool) }
       //  callback: function(err, rslt){}
+      //Returns: Promise<Array<Redirect>>
       this.getRedirectData = function(options, callback){
-        if(!callback) callback = function(err, rslt){ if(err) return _this.onError(err); };
-        options = _this.extend({
-          async: true,
-        }, options);
-        var redirect_listing_path = _this.redirect_listing_path;
-        if(!redirect_listing_path) return callback();
-        if((redirect_listing_path[0]!='/') && (redirect_listing_path[0]!='\\')){
-          redirect_listing_path = _this.joinPath(_this.page_files_path, redirect_listing_path);
-        }
-        _this.getJSON(redirect_listing_path, { async: options.async }, function(err, rslt){
-          if(err) return callback(err);
-          return callback(null, rslt);
+        return new Promise(function(resolve, reject){
+          if(!callback) callback = function(err, redirects){
+            if(err){ _this.onError(err); return reject(err); }
+            return resolve(redirects);
+          };
+          else resolve();
+          options = _this.extend({
+            async: true,
+          }, options);
+          var redirect_listing_path = _this.redirect_listing_path;
+          if(!redirect_listing_path) return callback();
+          if((redirect_listing_path[0]!='/') && (redirect_listing_path[0]!='\\')){
+            redirect_listing_path = _this.joinPath(_this.page_files_path, redirect_listing_path);
+          }
+          _this.getJSON(redirect_listing_path, { async: options.async }, function(err, rslt){
+            if(err) return callback(err);
+            return callback(null, rslt);
+          });
         });
       }
 
@@ -200,19 +214,26 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
       //         Use Full URL, Root-relative URL, or leave blank to use current URL
       //  options: (object) { async: (bool), onGetPageData: function(err){ /* return false to cancel page render */ } }
       //  callback: function(err){}
+      //Returns: Promise
       this.render = function(url, options, callback){
-        if(!callback) callback = function(err){ if(err) return _this.onError(err); };
-        options = _this.extend({
-          async: true,
-          onGetPageData: null,
-        }, options);
-        _this.getPageData(url, { async: options.async }, function(err, page){
-          if(options.onGetPageData){ if(options.onGetPageData(err, page)===false) return; }
-          if(err){
-            if(err.name == 'PageNotFoundError') return callback(err);
-            return callback(new Error('Error loading content: '+err.message));
-          }
-          _this.renderPage(page, {}, callback);
+        return new Promise(function(resolve, reject){
+          if(!callback) callback = function(err){
+            if(err){ _this.onError(err); return reject(err); }
+            return resolve();
+          };
+          else resolve();
+          options = _this.extend({
+            async: true,
+            onGetPageData: null,
+          }, options);
+          _this.getPageData(url, { async: options.async }, function(err, page){
+            if(options.onGetPageData){ if(options.onGetPageData(err, page)===false) return; }
+            if(err){
+              if(err.name == 'PageNotFoundError') return callback(err);
+              return callback(new Error('Error loading content: '+err.message));
+            }
+            _this.renderPage(page, {}, callback);
+          });
         });
       }
 
@@ -221,81 +242,87 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
       //  page: (object) CMS Page Data
       //  options: (object) { bindLinks: (bool) Route links in content areas using single-page JS }
       //  callback: function(){}
+      //Returns: Promise
       this.renderPage = function(page, options, callback){
-        if(!callback) callback = function(){};
-        options = _this.extend({
-          bindLinks: _this.bind_routing_events,
-        }, options);
-        page = page || {};
-        page.content = page.content || {};
-        page.properties = page.properties || {};
-        page.seo = page.seo || {};
-        _this.onPageRender(page);
-        _this.liveRender(
-          function(){ if(document && document.head) return [document.head]; return []; },
-          function(obj){
-            if(!_this.initialRender) _this.destroyPage();
-            if((page.header||'').trim()) _this.appendHtml(document.head, page.header, 'header');
-            if((page.css||'').trim()) _this.appendCss('jshcms_page_render_styles', page.css);
-            if(page.seo){
-              _this.appendTag(document.head, 'script', { id: 'jshcms-insert-divider-seo-start' });
-              if(page.seo.metadesc) _this.appendTag(document.head, 'meta', { name: 'description', content: page.seo.metadesc });
-              if(page.seo.keywords) _this.appendTag(document.head, 'meta', { name: 'keywords', content: page.seo.keywords });
-              if(page.seo.canonical_url) _this.appendTag(document.head, 'link', { rel: 'canonical', href: page.seo.canonical_url });
-              _this.appendTag(document.head, 'script', { id: 'jshcms-insert-divider-seo-end' });
+        return new Promise(function(resolve, reject){
+          if(!callback) callback = function(){
+            return resolve();
+          };
+          else resolve();
+          options = _this.extend({
+            bindLinks: _this.bind_routing_events,
+          }, options);
+          page = page || {};
+          page.content = page.content || {};
+          page.properties = page.properties || {};
+          page.seo = page.seo || {};
+          _this.onPageRender(page);
+          _this.liveRender(
+            function(){ if(document && document.head) return [document.head]; return []; },
+            function(obj){
+              if(!_this.initialRender) _this.destroyPage();
+              if((page.header||'').trim()) _this.appendHtml(document.head, page.header, 'header');
+              if((page.css||'').trim()) _this.appendCss('jshcms_page_render_styles', page.css);
+              if(page.seo){
+                _this.appendTag(document.head, 'script', { id: 'jshcms-insert-divider-seo-start' });
+                if(page.seo.metadesc) _this.appendTag(document.head, 'meta', { name: 'description', content: page.seo.metadesc });
+                if(page.seo.keywords) _this.appendTag(document.head, 'meta', { name: 'keywords', content: page.seo.keywords });
+                if(page.seo.canonical_url) _this.appendTag(document.head, 'link', { rel: 'canonical', href: page.seo.canonical_url });
+                _this.appendTag(document.head, 'script', { id: 'jshcms-insert-divider-seo-end' });
+              }
+              var newTitle = ((page.seo && page.seo.title ? page.seo.title : page.title) || '').toString();
+              if(newTitle.trim()) document.title = newTitle;
+            },
+            { addClass: false }
+          );
+          _this.liveRender('[cms-content-editor],[cms-component-content]', function(obj){
+            var contentArea = (obj.getAttribute('cms-component-content')||'').toString() || (obj.getAttribute('cms-content-editor')||'').toString();
+            if(contentArea.indexOf('page.content.')==0) contentArea = contentArea.substr(('page.content.').length);
+            if(contentArea){
+              var defaultContent = _this.getDefaultContent(obj);
+              if(typeof defaultContent == 'undefined') _this.setDefaultContent(obj, obj.innerHTML);
+              if(contentArea in page.content) obj.innerHTML = (page.content[contentArea]||'').toString();
+              else if(typeof defaultContent != 'undefined') obj.innerHTML = defaultContent;
+              if(options.bindLinks) _this.bindLinks(obj);
             }
-            var newTitle = ((page.seo && page.seo.title ? page.seo.title : page.title) || '').toString();
-            if(newTitle.trim()) document.title = newTitle;
-          },
-          { addClass: false }
-        );
-        _this.liveRender('[cms-content-editor],[cms-component-content]', function(obj){
-          var contentArea = (obj.getAttribute('cms-component-content')||'').toString() || (obj.getAttribute('cms-content-editor')||'').toString();
-          if(contentArea.indexOf('page.content.')==0) contentArea = contentArea.substr(('page.content.').length);
-          if(contentArea){
+          });
+          _this.liveRender('[cms-title]', function(obj){
             var defaultContent = _this.getDefaultContent(obj);
             if(typeof defaultContent == 'undefined') _this.setDefaultContent(obj, obj.innerHTML);
-            if(contentArea in page.content) obj.innerHTML = (page.content[contentArea]||'').toString();
-            else if(typeof defaultContent != 'undefined') obj.innerHTML = defaultContent;
-            if(options.bindLinks) _this.bindLinks(obj);
-          }
-        });
-        _this.liveRender('[cms-title]', function(obj){
-          var defaultContent = _this.getDefaultContent(obj);
-          if(typeof defaultContent == 'undefined') _this.setDefaultContent(obj, obj.innerHTML);
-          if(page.title){
-            obj.innerHTML = '';
-            obj.textContent = (page.title||'').toString();
-          }
-          else if(typeof defaultContent != 'undefined') obj.innerHTML = defaultContent;
-        });
-        _this.liveRender('[cms-template]', function(obj){
-          var templateCond = obj.getAttribute('cms-template');
-          _this.renderFunctions.showIf.call(obj, _this.evalBoolAttr(templateCond, function(val){ return val == page.page_template_id; }));
-        });
-        _this.liveRender('[cms-onrender]', function(obj){
-          var renderScript = (obj.getAttribute('cms-onrender')||'').toString().trim();
-          var renderParams = { page: page };
-          for(var key in _this.renderFunctions) renderParams[key] = _this.renderFunctions[key].bind(obj);
-          _this.evalJS(renderScript, obj, renderParams);
-        });
-        if((page.js||'').trim()) _this.evalWindow(page.js);
-        _this.liveRender('', function(){}, {}, function(){
-          //On Complete
-          if((page.footer||'').trim()){
-            var footerContainer = document.body;
-            if(_this.footer_container){
-              footerContainer = document.querySelectorAll(_this.footer_container);
-              if(footerContainer && footerContainer.length) footerContainer = footerContainer[0];
-              else footerContainer = null;
+            if(page.title){
+              obj.innerHTML = '';
+              obj.textContent = (page.title||'').toString();
             }
-            _this.appendHtml(footerContainer, page.footer, 'footer');
-          }
-          setTimeout(function(){
-            _this.onPageRendered(page);
-            _this.initialRender = false;
-            if(callback) callback();
-          }, 0);
+            else if(typeof defaultContent != 'undefined') obj.innerHTML = defaultContent;
+          });
+          _this.liveRender('[cms-template]', function(obj){
+            var templateCond = obj.getAttribute('cms-template');
+            _this.renderFunctions.showIf.call(obj, _this.evalBoolAttr(templateCond, function(val){ return val == page.page_template_id; }));
+          });
+          _this.liveRender('[cms-onrender]', function(obj){
+            var renderScript = (obj.getAttribute('cms-onrender')||'').toString().trim();
+            var renderParams = { page: page };
+            for(var key in _this.renderFunctions) renderParams[key] = _this.renderFunctions[key].bind(obj);
+            _this.evalJS(renderScript, obj, renderParams);
+          });
+          if((page.js||'').trim()) _this.evalWindow(page.js);
+          _this.liveRender('', function(){}, {}, function(){
+            //On Complete
+            if((page.footer||'').trim()){
+              var footerContainer = document.body;
+              if(_this.footer_container){
+                footerContainer = document.querySelectorAll(_this.footer_container);
+                if(footerContainer && footerContainer.length) footerContainer = footerContainer[0];
+                else footerContainer = null;
+              }
+              _this.appendHtml(footerContainer, page.footer, 'footer');
+            }
+            setTimeout(function(){
+              _this.onPageRendered(page);
+              _this.initialRender = false;
+              if(callback) callback();
+            }, 0);
+          });
         });
       }
 
@@ -305,95 +332,102 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
       //         Use Full URL, Root-relative URL, or leave blank to use current URL
       //  options: (object) { async: (bool), redirectOnNotFound: (bool), loadingOverlay: (bool) }
       //  callback: function(err){}
+      //Returns: Promise
       this.route = function(url, options, callback){
         if(_this.isInEditor()) return;
-        if(!callback) callback = function(err){ if(err) return _this.onError(err); };
-        if(url) url = url.toString();
-        var sameUrl = (!url || (url == window.location.href));
-        options = _this.extend({
-          async: true,
-          redirectOnNotFound: !sameUrl,
-          loadingOverlay: true,
-        }, options);
-        var loadObj = {};
-        _this.removeElement('jsHarmonyCMSClientProxy');
-        if(options.loadingOverlay) _this.startLoading(loadObj, { fadeIn: options.async });
-        var stopLoading = function(){ if(options.loadingOverlay) _this.stopLoading(loadObj); };
-        
-        if(_this.bind_routing_events) _this.bindPopState();
-        _this.getRedirectData({ async: options.async }, function(err, redirects){
-          if(err){ stopLoading(); return callback(new Error('Error loading redirects: '+err.message)); }
-          var redirect = _this.matchRedirect(redirects, url);
-          if(redirect){
-            var http_code = (redirect.http_code||'').toString();
-            if(http_code=='301'){ stopLoading(); _this.route(redirect.url); return; }
-            else if(http_code=='302'){ stopLoading(); _this.route(redirect.url); return; }
-            else if(http_code=='PASSTHRU'){
-              _this.execIf(window.parent && (window.parent != window.self),
-                function(next){
-                  window.parent.postMessage('jshcms_isInProxy', '*');
-                  var proxyTimeout = setTimeout(function(){
-                    _this.onProxyConfirmed = null;
-                    next();
-                  },500);
-                  _this.onProxyConfirmed = function(){
-                    window.clearTimeout(proxyTimeout);
-                    if(!sameUrl) window.location = redirect.url;
-                  };
+        return new Promise(function(resolve, reject){
+          if(!callback) callback = function(err){
+            if(err){ _this.onError(err); return reject(err); }
+            return resolve();
+          };
+          else resolve();
+          if(url) url = url.toString();
+          var sameUrl = (!url || (url == window.location.href));
+          options = _this.extend({
+            async: true,
+            redirectOnNotFound: !sameUrl,
+            loadingOverlay: true,
+          }, options);
+          var loadObj = {};
+          _this.removeElement('jsHarmonyCMSClientProxy');
+          if(options.loadingOverlay) _this.startLoading(loadObj, { fadeIn: options.async });
+          var stopLoading = function(){ if(options.loadingOverlay) _this.stopLoading(loadObj); };
+          
+          if(_this.bind_routing_events) _this.bindPopState();
+          _this.getRedirectData({ async: options.async }, function(err, redirects){
+            if(err){ stopLoading(); return callback(new Error('Error loading redirects: '+err.message)); }
+            var redirect = _this.matchRedirect(redirects, url);
+            if(redirect){
+              var http_code = (redirect.http_code||'').toString();
+              if(http_code=='301'){ stopLoading(); _this.route(redirect.url, { async: options.async, loadingOverlay: options.loadingOverlay }, callback); return; }
+              else if(http_code=='302'){ stopLoading(); _this.route(redirect.url, { async: options.async, loadingOverlay: options.loadingOverlay }, callback); return; }
+              else if(http_code=='PASSTHRU'){
+                _this.execIf(window.parent && (window.parent != window.self),
+                  function(next){
+                    window.parent.postMessage('jshcms_isInProxy', '*');
+                    var proxyTimeout = setTimeout(function(){
+                      _this.onProxyConfirmed = null;
+                      next();
+                    },500);
+                    _this.onProxyConfirmed = function(){
+                      window.clearTimeout(proxyTimeout);
+                      if(!sameUrl) window.location = redirect.url;
+                    };
+                  },
+                  function(){
+                    stopLoading();
+                    //Full screen iframe
+                    _this.liveRender(
+                      function(){ if(document && document.body) return [document.body]; return []; },
+                      function(obj){
+                        _this.appendIframe(document.body, 'jsHarmonyCMSClientProxy', redirect.url);
+                        if(_this.bind_routing_events && !sameUrl) _this.pushUrlState(url);
+                      },
+                      { addClass: false }
+                    );
+                  }
+                );
+                return;
+              }
+              else{ stopLoading(); return callback(new Error('Invalid redirect HTTP code: '+http_code)); }
+            }
+            else {
+              _this.render(url,
+                {
+                  async: options.async,
+                  onGetPageData: function(err, page){
+                    if(err){
+                      if(err.name == 'InvalidJsonError'){
+                        window.location = err.originalUrl;
+                        return false;
+                      }
+                      return;
+                    }
+                    if(page && page.page_template_id && !sameUrl){
+                      if((page.page_template_id=='<Standalone>') || (!_this.contains(_this.cms_templates, '*') && !_this.contains(_this.cms_templates, page.page_template_id))){
+                        window.location = url;
+                        return false;
+                      }
+                    }
+                  }
                 },
-                function(){
-                  stopLoading();
-                  //Full screen iframe
-                  _this.liveRender(
-                    function(){ if(document && document.body) return [document.body]; return []; },
-                    function(obj){
-                      _this.appendIframe(document.body, 'jsHarmonyCMSClientProxy', redirect.url);
+                function(err){
+                  //Change URL
+                  function onComplete(err){ stopLoading(); return callback(err); }
+                  if(err){
+                    if(err.name == 'PageNotFoundError'){
+                      if(options.redirectOnNotFound){ window.location = url; return; }
+                      //Generate 404
                       if(_this.bind_routing_events && !sameUrl) _this.pushUrlState(url);
-                    },
-                    { addClass: false }
-                  );
+                      return _this.onRouteNotFound(url, onComplete);
+                    }
+                  }
+                  if(_this.bind_routing_events && !sameUrl) _this.pushUrlState(url);
+                  return onComplete(err);
                 }
               );
-              return;
             }
-            else{ stopLoading(); return callback(new Error('Invalid redirect HTTP code: '+http_code)); }
-          }
-          else {
-            _this.render(url,
-              {
-                async: options.async,
-                onGetPageData: function(err, page){
-                  if(err){
-                    if(err.name == 'InvalidJsonError'){
-                      window.location = err.originalUrl;
-                      return false;
-                    }
-                    return;
-                  }
-                  if(page && page.page_template_id && !sameUrl){
-                    if((page.page_template_id=='<Standalone>') || (!_this.contains(_this.cms_templates, '*') && !_this.contains(_this.cms_templates, page.page_template_id))){
-                      window.location = url;
-                      return false;
-                    }
-                  }
-                }
-              },
-              function(err){
-                //Change URL
-                function onComplete(err){ stopLoading(); return callback(err); }
-                if(err){
-                  if(err.name == 'PageNotFoundError'){
-                    if(options.redirectOnNotFound){ window.location = url; return; }
-                    //Generate 404
-                    if(_this.bind_routing_events && !sameUrl) _this.pushUrlState(url);
-                    return _this.onRouteNotFound(url, onComplete);
-                  }
-                }
-                if(_this.bind_routing_events && !sameUrl) _this.pushUrlState(url);
-                return onComplete(err);
-              }
-            );
-          }
+          });
         });
       }
 
@@ -544,11 +578,11 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         _this.defaultContent.push({ node: obj, content: val });
       }
 
-      this.generate404 = function(callback){
+      this.generate404 = function(){
         return _this.renderPage({
           title: 'Not Found',
           content: { body: 'The requested page was not found on this server.' }
-        }, {}, callback);
+        }, {}, function(){});
       }
 
       this.evalBoolAttr = function(expr, f){

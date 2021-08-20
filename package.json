@@ -1,10 +1,10 @@
 {
   "name": "jsharmony-cms-sdk-clientjs",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "jsHarmony CMS SDK for Client-side JS",
   "main": "jsHarmonyCmsClient.js",
   "scripts": {
-    "build": "uglifyjs jsHarmonyCmsClient.js --comments /^!/ > jsHarmonyCmsClient.min.js",
+    "build": "node build.js | uglifyjs --comments /^!/ > jsHarmonyCmsClient.min.js",
     "test": "mocha --reporter spec"
   },
   "repository": {
