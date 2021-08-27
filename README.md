@@ -324,7 +324,8 @@ Page {
   },
   properties: {
       <property_name>: <property_value>
-  }
+  },
+  page_template_id: (string)
 }
 ```
 #### Example
