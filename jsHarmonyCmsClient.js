@@ -36,6 +36,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         cms_templates: ['*'],           //Array(string) List of Page Template Names supported by this instance, or use '*' for all
         bind_routing_events: true,      //(bool) Whether to auto-bind the routing events (link click, browser back / forward buttons) for single-page functionality
         footer_container: null,         //(string) CSS Selector - If set, use an element ID to insert page.footer content, instead of appending to the end of the page
+        auto_init: true                 //(bool) Set false to prevent onInit() from being called in constructor. If false, the caller must call onInit() before using jsHarmonyCmsClient
       }, config);
 
       //=================
@@ -49,6 +50,10 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
       this.onLinkClick = function(url, e){} //function(url,e){ /* return false to cancel click */ }
       this.onSaveState = function(url){ window.history.pushState({}, document.title, url); } //function(url){ }
       this.onRestoreState = function(url){ _this.route(url); } //function(url){ }
+      this.onSetTitle = function(title){ /* return false to prevent document title from being set by client. */ }
+      this.onSetMetaDescription = function(desc){/* return false to prevent <meta name="description"> from being set by client. */};
+      this.onSetMetaKeywords = function(keywords){/* return false to prevent <meta name="keywords"> from being set by client. */};
+      this.onSetCanonicalUrl = function(url){/* return false to prevent <link rel="canonical"> from being set by client. */};
 
       //=================
       //Private Properties
@@ -70,7 +75,6 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
 
       //Constructor
       this.onInit = function(){
-        _GET = _this.parseGET();
         if(!_this.isInEditor()) _this.appendRenderCss();
         if(_this.isInEditor()) _this.initEditor();
       }
@@ -99,6 +103,9 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
 
       //Returns true if page is opened from CMS Editor
       this.isInEditor = function(){ return !!_GET.jshcms_token; }
+
+      //Returns the template ID (if set) specified by the CMS Editor.
+      this.getEditorTemplateId = function(){ return _GET.page_template_id || ''; }
 
       //Convert URL to CMS Content Path
       //Parameters:
@@ -145,7 +152,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         else if(options.variation>=2) throw new PageNotFoundError(urlpath);
         return url;
       }
-      
+
       //Get CMS Page Data
       //Parameters:
       //  url: (string) CMS Page URL
@@ -237,6 +244,49 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         });
       }
 
+      //Render CMS Page Data To Element
+      //Parameters:
+      //  element: (object) Parent Element To Update
+      //  page: (object) CMS Page Data
+      //  options: (object) { bindLinks: (bool) Route links in content areas using single-page JS }
+      //  callback: function(){}
+      //Returns: Promise
+      this.renderElement = function(element, page, options, callback){
+        return new Promise(function(resolve){
+          if(!callback) callback = function(){
+            return resolve();
+          };
+          else resolve();
+
+          if(!element) return callback();
+
+          options = _this.extend({
+            bindLinks: _this.bind_routing_events,
+          }, options);
+          page = page || {};
+          page.content = page.content || {};
+          _this.liveRender(
+            function(){ return element.querySelectorAll('[cms-content-editor],[cms-component-content]'); },
+            function(obj){ _this.renderComponentsAndContent(page, obj, options); },
+            undefined,
+            function(){
+              _this.liveRender(
+                function(){ return element.querySelectorAll('[cms-template]'); },
+                function(obj){ _this.applyCmsTemplateLogic(page, obj); },
+                undefined,
+                function(){
+                  _this.liveRender(
+                    function(){ return element.querySelectorAll('[cms-onrender]'); },
+                    function(obj){ _this.evalCmsOnRender(page, obj)},
+                    undefined,
+                    function(){ if(callback) callback(); }
+                  );
+                }
+              );
+            });
+        });
+      }
+
       //Render CMS Page
       //Parameters:
       //  page: (object) CMS Page Data
@@ -265,26 +315,26 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
               if((page.css||'').trim()) _this.appendCss('jshcms_page_render_styles', page.css);
               if(page.seo){
                 _this.appendTag(document.head, 'script', { id: 'jshcms-insert-divider-seo-start' });
-                if(page.seo.metadesc) _this.appendTag(document.head, 'meta', { name: 'description', content: page.seo.metadesc });
-                if(page.seo.keywords) _this.appendTag(document.head, 'meta', { name: 'keywords', content: page.seo.keywords });
-                if(page.seo.canonical_url) _this.appendTag(document.head, 'link', { rel: 'canonical', href: page.seo.canonical_url });
+                if(page.seo.metadesc && (!_this.onSetMetaDescription || _this.onSetMetaDescription(page.seo.metadesc) !== false)){
+                  _this.appendTag(document.head, 'meta', { name: 'description', content: page.seo.metadesc });
+                }
+                if(page.seo.keywords && (!_this.onSetMetaKeywords || _this.onSetMetaKeywords(page.seo.keywords) !== false)){
+                  _this.appendTag(document.head, 'meta', { name: 'keywords', content: page.seo.keywords });
+                }
+                if(page.seo.canonical_url && (!_this.onSetCanonicalUrl || _this.onSetCanonicalUrl(page.seo.canonical_url)) !== false){
+                  _this.appendTag(document.head, 'link', { rel: 'canonical', href: page.seo.canonical_url });
+                }
                 _this.appendTag(document.head, 'script', { id: 'jshcms-insert-divider-seo-end' });
               }
               var newTitle = ((page.seo && page.seo.title ? page.seo.title : page.title) || '').toString();
-              if(newTitle.trim()) document.title = newTitle;
+              if(newTitle.trim()) {
+                if (!_this.onSetTitle || _this.onSetTitle(newTitle) !== false) document.title = newTitle;
+              }
             },
             { addClass: false }
           );
           _this.liveRender('[cms-content-editor],[cms-component-content]', function(obj){
-            var contentArea = (obj.getAttribute('cms-component-content')||'').toString() || (obj.getAttribute('cms-content-editor')||'').toString();
-            if(contentArea.indexOf('page.content.')==0) contentArea = contentArea.substr(('page.content.').length);
-            if(contentArea){
-              var defaultContent = _this.getDefaultContent(obj);
-              if(typeof defaultContent == 'undefined') _this.setDefaultContent(obj, obj.innerHTML);
-              if(contentArea in page.content) obj.innerHTML = (page.content[contentArea]||'').toString();
-              else if(typeof defaultContent != 'undefined') obj.innerHTML = defaultContent;
-              if(options.bindLinks) _this.bindLinks(obj);
-            }
+            _this.renderComponentsAndContent(page, obj, options);
           });
           _this.liveRender('[cms-title]', function(obj){
             var defaultContent = _this.getDefaultContent(obj);
@@ -296,14 +346,10 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
             else if(typeof defaultContent != 'undefined') obj.innerHTML = defaultContent;
           });
           _this.liveRender('[cms-template]', function(obj){
-            var templateCond = obj.getAttribute('cms-template');
-            _this.renderFunctions.showIf.call(obj, _this.evalBoolAttr(templateCond, function(val){ return val == page.page_template_id; }));
+            _this.applyCmsTemplateLogic(page, obj);
           });
           _this.liveRender('[cms-onrender]', function(obj){
-            var renderScript = (obj.getAttribute('cms-onrender')||'').toString().trim();
-            var renderParams = { page: page };
-            for(var key in _this.renderFunctions) renderParams[key] = _this.renderFunctions[key].bind(obj);
-            _this.evalJS(renderScript, obj, renderParams);
+            _this.evalCmsOnRender(page, obj);
           });
           if((page.js||'').trim()) _this.evalWindow(page.js);
           _this.liveRender('', function(){}, {}, function(){
@@ -352,7 +398,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
           _this.removeElement('jsHarmonyCMSClientProxy');
           if(options.loadingOverlay) _this.startLoading(loadObj, { fadeIn: options.async });
           var stopLoading = function(){ if(options.loadingOverlay) _this.stopLoading(loadObj); };
-          
+
           if(_this.bind_routing_events) _this.bindPopState();
           _this.getRedirectData({ async: options.async }, function(err, redirects){
             if(err){ stopLoading(); return callback(new Error('Error loading redirects: '+err.message)); }
@@ -528,7 +574,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
 
         if(!obj.hasAttribute('jshcms_properties_initClass')) obj.setAttribute('jshcms_properties_initClass', prevClasses.join(' '));
         var initClasses = (obj.getAttribute('jshcms_properties_initClass')||'').toString().trim().split(' ');
-        
+
         strClasses = (strClasses||'').toString().trim().split(' ');
         for(var i=0;i<strClasses.length;i++){
           strClasses[i] = strClasses[i].trim();
@@ -600,6 +646,30 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         return rsltOr;
       }
 
+      this.renderComponentsAndContent = function(page, obj, options){
+        var contentArea = (obj.getAttribute('cms-component-content')||'').toString() || (obj.getAttribute('cms-content-editor')||'').toString();
+        if(contentArea.indexOf('page.content.')==0) contentArea = contentArea.substr(('page.content.').length);
+        if(contentArea){
+          var defaultContent = _this.getDefaultContent(obj);
+          if(typeof defaultContent == 'undefined') _this.setDefaultContent(obj, obj.innerHTML);
+          if(contentArea in page.content) obj.innerHTML = (page.content[contentArea]||'').toString();
+          else if(typeof defaultContent != 'undefined') obj.innerHTML = defaultContent;
+          if(options.bindLinks) _this.bindLinks(obj);
+        }
+      }
+
+      this.applyCmsTemplateLogic = function(page, obj){
+        var templateCond = obj.getAttribute('cms-template');
+        _this.renderFunctions.showIf.call(obj, _this.evalBoolAttr(templateCond, function(val){ return val == page.page_template_id; }));
+      }
+
+      this.evalCmsOnRender = function(page, obj){
+        var renderScript = (obj.getAttribute('cms-onrender')||'').toString().trim();
+        var renderParams = { page: page };
+        for(var key in _this.renderFunctions) renderParams[key] = _this.renderFunctions[key].bind(obj);
+        _this.evalJS(renderScript, obj, renderParams);
+      }
+
       function PageNotFoundError(url){
         var instance = new Error('Page not found: '+url);
         instance.name='PageNotFoundError';
@@ -665,7 +735,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         server_url = server_url.toLowerCase();
         timestamp = parseInt(timestamp||'');
         if(!timestamp || (timestamp < (new Date().getTime() - 7 * 24 * 60 * 60 * 1000)) || (timestamp > (new Date().getTime() + 24 * 60 * 60 * 1000))) return callback(null, false);
-        if(access_key.length < 64) return 
+        if(access_key.length < 64) return;
         var access_hash = access_key.substr(32);
         var access_salt = '';
         for(var i=0;i<8;i++){
@@ -718,7 +788,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         if(!trigger.selector) return;
 
         var isSelectorFunc = (typeof(trigger.selector) === 'function');
-        var nodes = (isSelectorFunc ? trigger.selector() : document.querySelectorAll(trigger.selector));
+        var nodes = (isSelectorFunc ? trigger.selector() : document.querySelectorAll(trigger.selector)) || [];
         var newNodes = [];
         for(var i=0;i<nodes.length;i++){
           var foundNode = false;
@@ -1198,7 +1268,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
       this.stopLoading = function(obj){
         for(var i=0;i<this.loadQueue.length;i++){ if(obj===this.loadQueue[i]){ this.loadQueue.splice(i, 1); i--; } }
         if(this.loadQueue.length) return;
-    
+
         this.isLoading = false;
         _this.fadeOut('jsHarmonyCMSClientLoading', document.getElementById('jsHarmonyCMSClientLoading'), 500);
       }
@@ -1217,8 +1287,9 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
       });
 
 
-      //Call Constructor    
-      _this.onInit();
+      //Call Constructor
+      _GET = _this.parseGET();
+      if (_this.auto_init) _this.onInit();
     }
     return jsHarmonyCmsClient;
   })();

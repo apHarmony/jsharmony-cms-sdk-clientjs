@@ -19,16 +19,22 @@ Installation and integration instructions are available at [jsHarmonyCMS.com](ht
    * [onLinkClick](#onlinkclick)
    * [onSaveState](#onsavestate)
    * [onRestoreState](#onrestorestate)
+   * [onSetTitle](#onsettitle)
+   * [onSetMetaDescription](#onsetmetadescription)
+   * [onSetMetaKeywords](#onsetmetakeywords)
+   * [onSetCanonicalUrl](#onsetcanonicalurl)
 * *Public Methods*
    * [Router](#router)
    * [Standalone](#standalone)
    * [isInEditor](#isineditor)
+   * [getEditorTemplateId](#geteditortemplateid)
    * [resolve](#resolve)
    * [render](#render)
    * [route](#route)
    * [getPageData](#getpagedata)
    * [getRedirectData](#getredirectdata)
    * [renderPage](#renderpage)
+   * [renderElement](#renderelement)
    * [matchRedirect](#matchredirect)
    * [bindLinks](#bindlinks)
 
@@ -53,6 +59,7 @@ new jsHarmonyCmsClient(config)
   cms_templates: ['*'],           //Array(string) List of Page Template Names supported by this instance, or use '*' for all
   bind_routing_events: true,      //(bool) Whether to auto-bind the routing events (link click, browser back / forward buttons) for single-page functionality
   footer_container: null,         //(string) CSS Selector - If set, use an element ID to insert page.footer content, instead of appending to the end of the page
+  auto_init: true                 //(bool) Set false to prevent onInit() from being called in constructor. If false, the caller must call onInit() before using jsHarmonyCmsClient
 }
 ```
 
@@ -147,6 +154,46 @@ cmsClient.onRestoreState = function(url){ cmsClient.route(url); }
 
 ---
 
+### onSetTitle
+`function(title){ }`
+
+Function executed when the document title is updated. The title will not be updated if the function returns false.
+```js
+cmsClient.onSetTitle = function(title) { /* return false to prevent document title from being set by client. */}
+```
+
+---
+
+### onSetMetaDescription
+`function(description){ }`
+
+Function executed when the `<meta name="description">` element is updated. The element will not be updated if the function returns false.
+```js
+this.onSetMetaDescription = function(desc){/* return false to prevent <meta name="description"> from being set by client. */};
+```
+
+---
+
+### onSetMetaKeywords
+`function(keywords){ }`
+
+Function executed when the `<meta name="keywords">` element is updated. The element will not be updated if the function returns false.
+```js
+this.onSetMetaKeywords = function(keywords){/* return false to prevent <meta name="keywords"> from being set by client. */};
+```
+
+---
+
+### onSetCanonicalUrl
+`function(url){ }`
+
+Function executed when the `<link rel="canonical">` element is updated. The element will not be updated if the function returns false.
+```js
+this.onSetCanonicalUrl = function(url){/* return false to prevent <link rel="canonical"> from being set by client. */};
+```
+
+---
+
 ## Public Methods
 
 ---
@@ -197,6 +244,24 @@ N/A
 #### Example
 ```js
 if(cmsClient.isInEditor()) alert('Opened from CMS Editor');
+```
+
+---
+
+### getEditorTemplateId
+`<jsHarmonyCmsClient>.getEditorTemplateId()`
+
+Get the page template ID (if it exists) specified by the CMS Editor.
+
+#### Parameters
+N/A
+
+#### Returns
+`(string)` The template ID specified by the editor. Value will be empty if not specified.
+
+#### Example
+```js
+var templateId = cmsClient.getEditorTemplateId();
 ```
 
 ---
@@ -382,6 +447,29 @@ Render CMS Page
 #### Example
 ```js
 cmsClient.renderPage(page);
+```
+
+---
+
+### renderElement
+`<jsHarmonyCmsClient>.renderElement(element, page, options)`
+
+Renders CMS page data to the given element.
+#### Parameters
+* `element: (object)` Element To Update. Updates will be applied to all descendant nodes.
+* `page: (Page)` CMS Page Data Object (from getPageData function)
+* `options: (object)` *(Optional)* Options
+   ```less
+   {
+      // Whether to route links in content areas using single-page JS
+      bindLinks: (bool)
+   }
+   ```
+#### Returns
+`Promise`
+#### Example
+```js
+cmsClient.renderElement(document.querySelector('#parentWrapper'), page);
 ```
 
 ---
