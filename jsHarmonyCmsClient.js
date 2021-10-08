@@ -58,10 +58,12 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
       this.liveRenderActive = false;
       this.liveRenderTriggers = [];
       this.cntInsertDivider = 0;
+      this.cntContainerlessComponent = 0;
       this.isPopStateBound = false;
       this.initialRender = true;
       this.defaultContent = [];
       this.onProxyConfirmed = null;
+      this.renderedPage = null;
       this.timers = {};
 
       this.isLoading = false;
@@ -244,6 +246,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
       //  callback: function(){}
       //Returns: Promise
       this.renderPage = function(page, options, callback){
+        _this.renderedPage = page;
         return new Promise(function(resolve, reject){
           if(!callback) callback = function(){
             return resolve();
@@ -261,7 +264,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
             function(){ if(document && document.head) return [document.head]; return []; },
             function(obj){
               if(!_this.initialRender) _this.destroyPage();
-              if((page.header||'').trim()) _this.appendHtml(document.head, page.header, 'header');
+              if((page.header||'').trim()) _this.appendHtml(document.head, page.header, 'header', 'beforeend');
               if((page.css||'').trim()) _this.appendCss('jshcms_page_render_styles', page.css);
               if(page.seo){
                 _this.appendTag(document.head, 'script', { id: 'jshcms-insert-divider-seo-start' });
@@ -276,14 +279,40 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
             { addClass: false }
           );
           _this.liveRender('[cms-content-editor],[cms-component-content]', function(obj){
+            if(obj.hasAttribute('jshcms-ignore-first-render')){ obj.removeAttribute('jshcms-ignore-first-render'); return; }
             var contentArea = (obj.getAttribute('cms-component-content')||'').toString() || (obj.getAttribute('cms-content-editor')||'').toString();
             if(contentArea.indexOf('page.content.')==0) contentArea = contentArea.substr(('page.content.').length);
             if(contentArea){
               var defaultContent = _this.getDefaultContent(obj);
-              if(typeof defaultContent == 'undefined') _this.setDefaultContent(obj, obj.innerHTML);
-              if(contentArea in page.content) obj.innerHTML = (page.content[contentArea]||'').toString();
-              else if(typeof defaultContent != 'undefined') obj.innerHTML = defaultContent;
-              if(options.bindLinks) _this.bindLinks(obj);
+              if(!_this.isContainerless(obj) && obj.hasAttribute('cms-component-remove-container')){
+                obj = _this.convertToContainerless('content-'+(++_this.cntContainerlessComponent).toString(), obj);
+              }
+              if(_this.isContainerless(obj)){
+                var containerlessId = _this.getContainerlessId(obj);
+
+                var renderScript = (obj.getAttribute('cms-onrender')||'').toString().trim();
+                var renderParams = { page: page };
+                if(renderScript){
+                  for(var key in _this.renderFunctions) renderParams[key] = _this.renderFunctions[key].bind(obj);
+                  _this.evalJS(renderScript, obj, renderParams);
+                }
+                var hidden = obj.classList.contains('jshcms_onrender_hide');
+                if(hidden) _this.replaceContainerlessContent(containerlessId, '');
+                else if(contentArea in page.content) _this.replaceContainerlessContent(containerlessId, (page.content[contentArea]||'').toString());
+                else if(typeof defaultContent != 'undefined') _this.replaceContainerlessContent(containerlessId, defaultContent);
+                if(options.bindLinks){
+                  var children = _this.getContainerlessChildren(containerlessId);
+                  for(var i=0;i<children.length;i++){
+                    _this.bindLinks(children[i]);
+                  }
+                }
+              }
+              else {
+                if(typeof defaultContent == 'undefined') _this.setDefaultContent(obj, obj.innerHTML);
+                if(contentArea in page.content) obj.innerHTML = (page.content[contentArea]||'').toString();
+                else if(typeof defaultContent != 'undefined') obj.innerHTML = defaultContent;
+                if(options.bindLinks) _this.bindLinks(obj);
+              }
             }
           });
           _this.liveRender('[cms-title]', function(obj){
@@ -300,6 +329,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
             _this.renderFunctions.showIf.call(obj, _this.evalBoolAttr(templateCond, function(val){ return val == page.page_template_id; }));
           });
           _this.liveRender('[cms-onrender]', function(obj){
+            if(_this.isContainerless(obj)) return;
             var renderScript = (obj.getAttribute('cms-onrender')||'').toString().trim();
             var renderParams = { page: page };
             for(var key in _this.renderFunctions) renderParams[key] = _this.renderFunctions[key].bind(obj);
@@ -315,7 +345,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
                 if(footerContainer && footerContainer.length) footerContainer = footerContainer[0];
                 else footerContainer = null;
               }
-              _this.appendHtml(footerContainer, page.footer, 'footer');
+              _this.appendHtml(footerContainer, page.footer, 'footer', 'beforeend');
             }
             setTimeout(function(){
               _this.onPageRendered(page);
@@ -350,6 +380,12 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
           }, options);
           var loadObj = {};
           _this.removeElement('jsHarmonyCMSClientProxy');
+
+          //Check if domain is the same
+          var urlparts = _this.getUrlParts(url);
+          var sameDomain = (window.location.protocol == urlparts.protocol) && (window.location.host == urlparts.host);
+          if(!sameDomain){ window.location = url; return; }
+
           if(options.loadingOverlay) _this.startLoading(loadObj, { fadeIn: options.async });
           var stopLoading = function(){ if(options.loadingOverlay) _this.stopLoading(loadObj); };
           
@@ -398,13 +434,15 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
                   onGetPageData: function(err, page){
                     if(err){
                       if(err.name == 'InvalidJsonError'){
+                        stopLoading();
                         window.location = err.originalUrl;
                         return false;
                       }
                       return;
                     }
                     if(page && page.page_template_id && !sameUrl){
-                      if((page.page_template_id=='<Standalone>') || (!_this.contains(_this.cms_templates, '*') && !_this.contains(_this.cms_templates, page.page_template_id))){
+                      if((_this.renderedPage && _this.renderedPage.page_template_id=='<Standalone>') || (page.page_template_id=='<Standalone>') || (!_this.contains(_this.cms_templates, '*') && !_this.contains(_this.cms_templates, page.page_template_id))){
+                        stopLoading();
                         window.location = url;
                         return false;
                       }
@@ -416,7 +454,11 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
                   function onComplete(err){ stopLoading(); return callback(err); }
                   if(err){
                     if(err.name == 'PageNotFoundError'){
-                      if(options.redirectOnNotFound){ window.location = url; return; }
+                      if(options.redirectOnNotFound){
+                        stopLoading();
+                        window.location = url;
+                        return;
+                      }
                       //Generate 404
                       if(_this.bind_routing_events && !sameUrl) _this.pushUrlState(url);
                       return _this.onRouteNotFound(url, onComplete);
@@ -559,9 +601,9 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
 
       this.destroyPage = function(){
         _this.onPageDestroy();
-        _this.removeHtml('header');
-        _this.removeHtml('seo');
-        _this.removeHtml('footer');
+        _this.removeContainerless('header', true);
+        _this.removeContainerless('seo', true);
+        _this.removeContainerless('footer', true);
         _this.removeElement('jshcms_page_render_styles');
       }
 
@@ -621,6 +663,8 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
       function linkClickHandler(e){
         if(e.target && e.target.href){
           var targetUrl = e.target.href;
+          var attrHref = e.target.getAttribute('href');
+          if(attrHref && (attrHref[0]=='#')) return;
           e.preventDefault();
           if(_this.onLinkClick(targetUrl, e)===false) return;
           _this.route(targetUrl);
@@ -771,6 +815,88 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         }, 0);
       }
 
+      //Containerless
+      //-----------
+
+      this.isContainerless = function(obj){
+        if(obj && obj.id && _this.beginsWith(obj.id, 'jshcms-insert-divider-') && _this.endsWith(obj.id, '-start')) return true;
+        return false;
+      }
+
+      this.getContainerlessId = function(obj){
+        if(_this.isContainerless(obj)) return obj.id.substr(('jshcms-insert-divider-').length).slice(0, -1*('-start').length);
+        return undefined;
+      }
+
+      this.getContainerlessChildren = function(dividerId){
+        var dividerStartNode = document.getElementById('jshcms-insert-divider-'+dividerId+'-start');
+        var children = [];
+        if(dividerStartNode){
+          var container = dividerStartNode.parentNode;
+          var foundStart = false;
+          if(container) for(var i=0;i<container.childNodes.length;i++){
+            var node = container.childNodes[i];
+            if(!node) continue;
+            var nodeId = node.id;
+            if(!foundStart){
+              if(nodeId == ('jshcms-insert-divider-'+dividerId+'-start')) foundStart = true;
+            }
+            else{
+              if(nodeId == ('jshcms-insert-divider-'+dividerId+'-end')) break;
+              children.push(node);
+            }
+          }
+        }
+        return children;
+      }
+
+      this.removeContainerless = function(dividerId, removeContainer){
+        var dividerStartNode = document.getElementById('jshcms-insert-divider-'+dividerId+'-start');
+        if(dividerStartNode){
+          var container = dividerStartNode.parentNode;
+          var foundStart = false;
+          var foundEnd = false;
+          if(container) for(var i=0;i<container.childNodes.length;i++){
+            var node = container.childNodes[i];
+            if(!node) continue;
+            var nodeId = node.id;
+            if(!foundStart){
+              if(nodeId == ('jshcms-insert-divider-'+dividerId+'-start')) foundStart = true;
+              if(!removeContainer) continue;
+            }
+            if(foundStart){
+              if(nodeId == ('jshcms-insert-divider-'+dividerId+'-end')) foundEnd = true;
+              if(foundEnd && !removeContainer) break;
+              container.removeChild(node);
+              i--;
+              if(foundEnd) break;
+            }
+          }
+        }
+      }
+
+      this.replaceContainerlessContent = function(dividerId, html){
+        _this.removeContainerless(dividerId, false);
+        var dividerStartNode = document.getElementById('jshcms-insert-divider-'+dividerId+'-start');
+        if(dividerStartNode){
+          _this.appendHtml(dividerStartNode, html, null, 'afterend');
+        }
+      }
+
+      this.convertToContainerless = function(dividerId, obj){
+        obj.insertAdjacentHTML('beforebegin', '<script id="jshcms-insert-divider-'+dividerId+'-start" jshcms-ignore-first-render="true"></script>');
+        obj.insertAdjacentHTML('afterend', '<script id="jshcms-insert-divider-'+dividerId+'-end"></script>');
+        var objParent = obj.parentNode;
+        var dividerStartNode = document.getElementById('jshcms-insert-divider-'+dividerId+'-start');
+        if(dividerStartNode){
+          var transAttr = ['cms-component-content','cms-onrender'];
+          for(var i=0;i<transAttr.length;i++) if(obj.hasAttribute(transAttr[i])) dividerStartNode.setAttribute(transAttr[i], obj.getAttribute(transAttr[i]));
+        }
+        while (obj.firstChild) objParent.insertBefore(obj.firstChild, obj);
+        objParent.removeChild(obj);
+        return document.getElementById('jshcms-insert-divider-'+dividerId+'-start');
+      }
+
       //Utility - Path
       //--------------
 
@@ -795,6 +921,13 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         var lastDot = path.lastIndexOf('.');
         if(lastDot >= 0) path = path.substr(lastDot);
         return path;
+      }
+
+      this.getUrlParts = function(url){
+        if(!url) url = '';
+        var a = document.createElement('a');
+        a.href = url;
+        return a;
       }
 
       //Utility - JS Extensions
@@ -981,37 +1114,25 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
       //Utility - DOM
       //-------------
 
-      this.removeHtml = function(dividerId){
-        var dividerStartNode = document.getElementById('jshcms-insert-divider-'+dividerId+'-start');
-        if(dividerStartNode){
-          var container = dividerStartNode.parentNode;
-          var foundStart = false;
-          if(container) for(var i=0;i<container.childNodes.length;i++){
-            var node = container.childNodes[i];
-            if(!node) continue;
-            var nodeId = node.id;
-            if(!foundStart){
-              if(nodeId == ('jshcms-insert-divider-'+dividerId+'-start')) foundStart = true;
-            }
-            if(foundStart){
-              container.removeChild(node);
-              i--;
-              if(nodeId == ('jshcms-insert-divider-'+dividerId+'-end')) break;
-            }
-          }
-        }
-      }
-
-      this.appendHtml = function(container, html, dividerId){
+      this.appendHtml = function(container, html, dividerId, position){
         if(!container) return;
         //Insert script as a boundary
         var saveDivider = !!dividerId;
         if(!dividerId) dividerId = ++_this.cntInsertDivider;
-        container.insertAdjacentHTML('beforeend', '<script id="jshcms-insert-divider-'+dividerId+'-start"></script>');
-        container.insertAdjacentHTML('beforeend', html);
-        container.insertAdjacentHTML('beforeend', '<script id="jshcms-insert-divider-'+dividerId+'-end"></script>');
+        var newHtml = [
+          '<script id="jshcms-insert-divider-'+dividerId+'-start"></script>',
+          html,
+          '<script id="jshcms-insert-divider-'+dividerId+'-end"></script>',
+        ];
+        if((position=='afterbegin')||(position=='afterend')) {
+          for(var i=newHtml.length-1;i>=0;i--) container.insertAdjacentHTML(position, newHtml[i]);
+        }
+        else {
+          for(var i=0;i<newHtml.length;i++) container.insertAdjacentHTML(position, newHtml[i]);
+        }
 
         //Find the script, put all new nodes into an array, and remove the script
+        if((position=='beforebegin')||(position=='afterend')) container = container.parentNode;
         var newNodes = [];
         var dividerStartNode = null;
         var dividerEndNode = null;
