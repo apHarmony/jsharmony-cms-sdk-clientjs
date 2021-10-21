@@ -31,6 +31,7 @@ Installation and integration instructions are available at [jsHarmonyCMS.com](ht
    * [renderPage](#renderpage)
    * [matchRedirect](#matchredirect)
    * [bindLinks](#bindlinks)
+   * [getPageTemplateId](#getpagetemplateid)
 
 ---
 
@@ -45,14 +46,59 @@ new jsHarmonyCmsClient(config)
 - `config` (Object) :: Object with one or more of the configuration keys below:
 ```less
 {
-  access_keys: [],                //Array(string) CMS Editor Access Keys
-  page_files_path: '/',           //(string) URL to page files
-  redirect_listing_path: null,    //(string) URL to redirect listing JSON file
-  default_document: 'index.html', //(string) Default Directory Document
-  strict_url_resolution: false,   //(bool) Whether to try URL variations (add "/", "/<default_document>")
-  cms_templates: ['*'],           //Array(string) List of Page Template Names supported by this instance, or use '*' for all
-  bind_routing_events: true,      //(bool) Whether to auto-bind the routing events (link click, browser back / forward buttons) for single-page functionality
-  footer_container: null,         //(string) CSS Selector - If set, use an element ID to insert page.footer content, instead of appending to the end of the page
+  //Array(string) CMS Editor Access Keys
+  access_keys: [],
+
+  //(string) URL to page files
+  page_files_path: '/',
+
+  //(string) URL to redirect listing JSON file
+  redirect_listing_path: null,
+
+  //(string) Default Directory Document
+  default_document: 'index.html',
+
+  //(bool) Whether to try URL variations (add "/", "/<default_document>")
+  strict_url_resolution: false,
+
+  //Array(string) List of Page Template Names supported by this instance, or use '*' for all
+  cms_templates: ['*'],
+
+  //(bool) Whether to auto-bind the routing events (link click, browser back / forward buttons) for single-page functionality
+  bind_routing_events: true,
+
+  //(string) CSS Selector - If set, use an element ID to insert page.footer content, instead of appending to the end of the page
+  footer_container: null,
+
+  //(bool) Whether to automatically initialize the CMS Editor & Styles
+  auto_init: true,
+
+  //(object) Render Config
+  // Define which items to render, or override renderer with custom function
+  // Each item can be set to one of the following values:
+  //   true (to render) (Default)
+  //   false (do not render)
+  //   function(val, obj, params){} //Override renderer with custom function
+  render: {
+    content: true,
+      // or content: { [contentArea1]: true, [contentArea2]: true, ... }
+    header: true,
+    css: true,
+    js: true,
+    footer: true,
+    seo: {
+      metadesc: true,
+      keywords: true,
+      canonical_url: true,
+    },
+    elements: {
+      "window-title": true,
+      "cms-content-editor": true,
+      "cms-component-content": true,
+      "cms-onrender": true,
+      "cms-title": true,
+      "cms-template": true,
+    },
 }
 ```
 
@@ -422,6 +468,23 @@ Bind links in container to the single-page CMS router
 #### Example
 ```js
 cmsClient.bindLinks(document.body);
+```
+
+---
+
+### getPageTemplateId
+`<jsHarmonyCmsClient>.getPageTemplateId()`
+
+Returns the Page Template ID of the current page or editor template
+#### Parameters
+N/A
+
+#### Returns
+`(string)` Page Template ID
+
+#### Example
+```js
+var curPageTemplateId = cmsClient.getPageTemplateId();
 ```
 
 ---

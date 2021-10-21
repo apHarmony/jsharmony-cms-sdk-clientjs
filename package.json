@@ -1,6 +1,6 @@
 {
   "name": "jsharmony-cms-sdk-clientjs",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "jsHarmony CMS SDK for Client-side JS",
   "main": "jsHarmonyCmsClient.js",
   "scripts": {
