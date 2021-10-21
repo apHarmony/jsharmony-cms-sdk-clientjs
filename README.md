@@ -420,7 +420,16 @@ Render CMS Page
    ```less
    {
       // Whether to route links in content areas using single-page JS
-      bindLinks: (bool)
+      // Default: config.bind_routing_events
+      bindLinks: (bool),
+
+      // Render Config
+      // Default: config.render
+      render: (Render Config),
+
+      // Container for rendering
+      // Default: document.body
+      container: (DOM Node),
    }
    ```
 #### Returns

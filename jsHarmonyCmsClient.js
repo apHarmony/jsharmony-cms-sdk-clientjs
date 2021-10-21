@@ -271,8 +271,8 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
       //  page: (object) CMS Page Data
       //  options: (object) {
       //    bindLinks: (bool) Route links in content areas using single-page JS (Default Value: config.bind_routing_events)
-      //    render: (object) Render Config (Default Value: config.render)
-      //    container: (DOM Element) Container for render (Default Value: document.body)
+      //    render: (Render Config) Render Config (Default Value: config.render)
+      //    container: (DOM Node) Container for rendering (Default Value: document.body)
       //  }
       //  callback: function(){}
       //Returns: Promise
