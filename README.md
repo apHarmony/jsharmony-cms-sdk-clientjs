@@ -430,6 +430,11 @@ Render CMS Page
       // Container for rendering
       // Default: document.body
       container: (DOM Node),
+
+      // Whether to force rendering immediately
+      //   When false, renderPage can be called before all containers are added to the DOM
+      // Default: false
+      immediate: (bool),
    }
    ```
 #### Returns

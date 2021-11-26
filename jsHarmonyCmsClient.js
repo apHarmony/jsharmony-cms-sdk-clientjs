@@ -273,6 +273,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
       //    bindLinks: (bool) Route links in content areas using single-page JS (Default Value: config.bind_routing_events)
       //    render: (Render Config) Render Config (Default Value: config.render)
       //    container: (DOM Node) Container for rendering (Default Value: document.body)
+      //    immediate: (bool) Force rendering immediately.  When false, renderPage can be called before all containers are added to the DOM (Default Value: false)
       //  }
       //  callback: function(){}
       //Returns: Promise
@@ -288,6 +289,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
             bindLinks: _this.config.bind_routing_events,
             render: _this.config.render,
             container: null,
+            immediate: false,
           }, options);
 
           function resolveMember(obj, id){
@@ -333,7 +335,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
               var newTitle = ((page.seo && page.seo.title ? page.seo.title : page.title) || '').toString();
               if(newTitle.trim()) renderHook('elements.window-title', newTitle, null, null, function(){ document.title = newTitle; });
             },
-            { addClass: false }
+            { addClass: false, immediate: options.immediate }
           );
           _this.liveRender('[cms-content-editor],[cms-component-content]', function(obj){
             if(obj.hasAttribute('jshcms-ignore-first-render')){ obj.removeAttribute('jshcms-ignore-first-render'); return; }
@@ -381,7 +383,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
                 });
               });
             }
-          }, { container: options.container });
+          }, { container: options.container, immediate: options.immediate });
           _this.liveRender('[cms-title]', function(obj){
             renderHook('elements.cms-title', page.title, obj, null, function(){
               var defaultContent = _this.getDefaultContent(obj);
@@ -392,13 +394,13 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
               }
               else if(typeof defaultContent != 'undefined') obj.innerHTML = defaultContent;
             });
-          }, { container: options.container });
+          }, { container: options.container, immediate: options.immediate });
           _this.liveRender('[cms-template]', function(obj){
             renderHook('elements.cms-template', page.title, obj, null, function(){
               var templateCond = obj.getAttribute('cms-template');
               _this.renderFunctions.showIf.call(obj, _this.evalBoolAttr(templateCond, function(condVal){ return condVal == page.page_template_id; }));
             });
-          }, { container: options.container });
+          }, { container: options.container, immediate: options.immediate });
           _this.liveRender('[cms-onrender]', function(obj){
             if(_this.isContainerless(obj)) return;
             var renderScript = (obj.getAttribute('cms-onrender')||'').toString().trim();
@@ -407,9 +409,9 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
             renderHook('elements.cms-onrender', renderScript, obj, renderParams, function(){
               _this.evalJS(renderScript, obj, renderParams);
             });
-          }, { container: options.container });
+          }, { container: options.container, immediate: options.immediate });
           if((page.js||'').trim()) renderHook('js', page.js, null, null, function(){ _this.evalWindow(page.js); });
-          _this.liveRender('', function(){}, {}, function(){
+          _this.liveRender('', function(){}, { immediate: options.immediate }, function(){
             //On Complete
             if((page.footer||'').trim()){
               var footerContainer = options.container || document.body;
@@ -422,11 +424,11 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
                 _this.appendHtml(footerContainer, page.footer, 'footer', 'beforeend');
               });
             }
-            setTimeout(function(){
+            _this.execIf(!options.immediate, function(next){ setTimeout(next, 0); }, function(){
               _this.onPageRendered(page);
               _this.initialRender = false;
               if(callback) callback();
-            }, 0);
+            });
           });
         });
       }
@@ -865,21 +867,24 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         onComplete = onComplete || function(){};
         options = options || {};
         if(!('addClass' in options)) options.addClass = true;
+        if(!('immediate' in options)) options.immediate = false;
         var newTrigger = { selector: sel, action: action, lastNodes: [], onComplete: onComplete, options: options, id: _this.liveRenderTriggers.length+1 };
         _this.liveRenderTriggers.push(newTrigger);
         _this.liveRenderRefresh(newTrigger);
         if(_this.liveRenderActive) return;
         _this.liveRenderActive = true;
 
-        document.addEventListener('readystatechange', function(){
-          _this.liveRenderRefreshAll();
-        });
         var observer = null;
-        if(options.container || document){
-          observer = new MutationObserver(function(mutationsList, observer){ _this.liveRenderRefreshAll(); });
-          observer.observe((options.container || document), { childList: true, subtree: true });
+        if(!options.immediate){
+          document.addEventListener('readystatechange', function(){
+            _this.liveRenderRefreshAll();
+          });
+          if(options.container || document){
+            observer = new MutationObserver(function(mutationsList, observer){ _this.liveRenderRefreshAll(); });
+            observer.observe((options.container || document), { childList: true, subtree: true });
+          }
         }
-        setTimeout(function(){
+        _this.execIf(!options.immediate, function(next){ setTimeout(next, 0); }, function(){
           if(observer) observer.disconnect();
           _this.liveRenderRefreshAll();
           for(var i=0;i<_this.liveRenderTriggers.length;i++) _this.liveRenderTriggers[i].onComplete();
@@ -890,7 +895,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
           }
           _this.liveRenderTriggers = [];
           _this.liveRenderActive = false;
-        }, 0);
+        });
       }
 
       //Containerless
