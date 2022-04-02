@@ -16,7 +16,9 @@ GNU Lesser General Public License for more details.
 You should have received a copy of the GNU Lesser General Public License
 along with this package.  If not, see <http://www.gnu.org/licenses/>.
 */
-;(function(){
+(function(){
+
+  /* globals Promise, require, global, module, Uint8Array */
 
   var jsHarmonyCmsClient = (function(){
     require('./Promise.polyfill.js');
@@ -42,8 +44,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
       //(object) Render Config - Define which items to render, or override renderer with custom function
       // Each item can be true (to render), false (to not render), or an override function(val, obj, params){}
       _this.config.render = extend({
-        content: true, //true / false / override(val, obj, params){}
-                       //or { [contentArea]: true / false / override(val, obj, params){} }
+        content: true, //true / false / override(val, obj, params){} / { [contentArea]: true / false / override(val, obj, params){} }
         header: true,
         css: true,
         js: true,
@@ -54,26 +55,26 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
           canonical_url: true,
         },
         elements: {
-          "window-title": true,
-          "cms-content-editor": true,
-          "cms-component-content": true,
-          "cms-onrender": true,
-          "cms-title": true,
-          "cms-template": true,
+          'window-title': true,
+          'cms-content-editor': true,
+          'cms-component-content': true,
+          'cms-onrender': true,
+          'cms-title': true,
+          'cms-template': true,
         },
       }, _this.config.render);
 
       //=================
       //Public Properties
       //=================
-      this.onError = function(err){ console.error(err.message); };  //function(err){ }
+      this.onError = function(err){ console.error(err.message); };  /* function(err){ } */ // eslint-disable-line no-console
       this.onRouteNotFound = function(url){ _this.generate404(); }; //function(url){ }
-      this.onPageRender = function(){} //function(page){ }
-      this.onPageRendered = function(){} //function(page){ }
-      this.onPageDestroy = function(){} //function(){ }
-      this.onLinkClick = function(url, e){} //function(url,e){ /* return false to cancel click */ }
-      this.onSaveState = function(url){ window.history.pushState({}, document.title, url); } //function(url){ }
-      this.onRestoreState = function(url){ _this.route(url); } //function(url){ }
+      this.onPageRender = function(){}; //function(page){ }
+      this.onPageRendered = function(){}; //function(page){ }
+      this.onPageDestroy = function(){}; //function(){ }
+      this.onLinkClick = function(url, e){}; //function(url,e){ /* return false to cancel click */ }
+      this.onSaveState = function(url){ window.history.pushState({}, document.title, url); }; //function(url){ }
+      this.onRestoreState = function(url){ _this.route(url); }; //function(url){ }
 
       //=================
       //Private Properties
@@ -99,8 +100,8 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         _this.isInitialized = true;
         if(!_this.isInEditor()) _this.appendRenderCss();
         if(_this.isInEditor()) _this.initEditor();
-      }
-      this.autoInit = function(){ if(!_this.isInitialized) _this.onInit(); }
+      };
+      this.autoInit = function(){ if(!_this.isInitialized) _this.onInit(); };
 
       //================
       //Public Functions
@@ -114,7 +115,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         _this.autoInit();
         if(_this.isInEditor()) return;
         _this.route(url, { async: false, loadingOverlay: false });
-      }
+      };
 
       //Main Entry Point - Load Standalone CMS Content
       //Parameters:
@@ -124,10 +125,10 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         _this.autoInit();
         if(_this.isInEditor()) return;
         _this.render(url, { async: false }, function(err){});
-      }
+      };
 
       //Returns true if page is opened from CMS Editor
-      this.isInEditor = function(){ return !!_GET.jshcms_token; }
+      this.isInEditor = function(){ return !!_GET.jshcms_token; };
 
       //Convert URL to CMS Content Path
       //Parameters:
@@ -173,7 +174,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         }
         else if(options.variation>=2) throw new PageNotFoundError(urlpath);
         return url;
-      }
+      };
       
       //Get CMS Page Data
       //Parameters:
@@ -208,7 +209,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
             return callback(err, rslt);
           });
         });
-      }
+      };
 
       //Get CMS Redirect Data
       //Parameters:
@@ -235,7 +236,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
             return callback(null, rslt);
           });
         });
-      }
+      };
 
       //Get CMS Content and Render
       //Parameters:
@@ -264,7 +265,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
             _this.renderPage(page, {}, callback);
           });
         });
-      }
+      };
 
       //Render CMS Page
       //Parameters:
@@ -297,7 +298,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
             id = id.toString().split('.');
             for(var i=0;i<id.length;i++){
               if((obj===false)||(obj===true)) return obj;
-              if(!obj) return undefind;
+              if(!obj) return undefined;
               if(!(id[i] in obj)) return undefined;
               obj = obj[id[i]];
             }
@@ -431,7 +432,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
             });
           });
         });
-      }
+      };
 
       //Run client-side CMS router
       //Parameters:
@@ -548,7 +549,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
             }
           });
         });
-      }
+      };
 
       //Check if URL matches redirects and return first match
       //Parameters:
@@ -604,7 +605,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
           }
         }
         return undefined;
-      }
+      };
 
       //Bind links in container to use single-page router on click
       //Parameters:
@@ -614,12 +615,13 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
           obj.removeEventListener('click', linkClickHandler);
         }
         catch(ex){
+          /* Do nothing */
         }
         obj.addEventListener('click', linkClickHandler);
-      }
+      };
       
       //Returns the Page Template ID of the current page or editor template
-      this.getPageTemplateId = function(){ return _GET.page_template_id || (_this.renderedPage && _this.renderedPage.page_template_id) || ''; }
+      this.getPageTemplateId = function(){ return _GET.page_template_id || (_this.renderedPage && _this.renderedPage.page_template_id) || ''; };
 
 
       //==================
@@ -642,7 +644,8 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         var obj = this;
 
         var prevClasses = [];
-        for(var i=0;i<obj.classList.length;i++){
+        var i;
+        for(i=0;i<obj.classList.length;i++){
           var className = obj.classList[i];
           if(!className || _this.beginsWith(className, 'jshcms_rendered_')) continue;
           prevClasses.push(className);
@@ -652,11 +655,11 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         var initClasses = (obj.getAttribute('jshcms_properties_initClass')||'').toString().trim().split(' ');
         
         strClasses = (strClasses||'').toString().trim().split(' ');
-        for(var i=0;i<strClasses.length;i++){
+        for(i=0;i<strClasses.length;i++){
           strClasses[i] = strClasses[i].trim();
           if(strClasses[i]) obj.classList.add(strClasses[i]);
         }
-        for(var i=0;i<prevClasses.length;i++){
+        for(i=0;i<prevClasses.length;i++){
           if(_this.contains(strClasses, prevClasses[i])) continue;
           if(_this.contains(initClasses, prevClasses[i])) continue;
           if(prevClasses[i]) obj.classList.remove(prevClasses[i]);
@@ -685,27 +688,27 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         _this.removeContainerless('seo', true);
         _this.removeContainerless('footer', true);
         _this.removeElement('jshcms_page_render_styles');
-      }
+      };
 
       this.getDefaultContent = function(obj){
         for(var i=0;i<_this.defaultContent.length;i++){
           if(_this.defaultContent[i].node == obj) return _this.defaultContent[i].content;
         }
-      }
+      };
 
       this.setDefaultContent = function(obj, val){
         for(var i=0;i<_this.defaultContent.length;i++){
-          if(_this.defaultContent[i].node == obj){ _this.defaultContent[i].content = val; return }
+          if(_this.defaultContent[i].node == obj){ _this.defaultContent[i].content = val; return; }
         }
         _this.defaultContent.push({ node: obj, content: val });
-      }
+      };
 
       this.generate404 = function(){
         return _this.renderPage({
           title: 'Not Found',
           content: { body: 'The requested page was not found on this server.' }
         }, {}, function(){});
-      }
+      };
 
       this.evalBoolAttr = function(expr, f){
         expr = _this.map(expr.split('||'), function(val){ return val.split('&&'); });
@@ -720,7 +723,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
           rsltOr = rsltOr || rsltAnd;
         }
         return rsltOr;
-      }
+      };
 
       function PageNotFoundError(url){
         var instance = new Error('Page not found: '+url);
@@ -754,7 +757,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
       this.pushUrlState = function(url){
         if(_this.config.bind_routing_events) _this.bindPopState();
         _this.onSaveState(url);
-      }
+      };
 
       this.bindPopState = function(){
         if(!_this.isPopStateBound){
@@ -763,7 +766,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
           });
           _this.isPopStateBound = true;
         }
-      }
+      };
 
       //CMS Editor
       //----------
@@ -782,7 +785,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
             _this.stopLoading(_this);
           });
         });
-      }
+      };
 
       this.validateAccessKey = function(access_key, server_url, timestamp, callback){
         access_key = access_key.toString();
@@ -800,7 +803,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         if(!Array.isArray(_this.config.access_keys)) _this.config.access_keys = [_this.config.access_keys];
         var foundMatch = false;
         _this.eachParallel(_this.config.access_keys, function(test_key, idx, validate_cb){
-          var test_key = (test_key||'').toString();
+          test_key = (test_key||'').toString();
           if(test_key == '*'){ foundMatch = true; return validate_cb(); }
           if(!test_key || (test_key.length < 64)) return validate_cb();
           var test_domain_hash = test_key.substr(32);
@@ -825,7 +828,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
           if(err) return callback(err);
           return callback(null, foundMatch);
         });
-      }
+      };
 
       //Live Render
       //-----------
@@ -836,7 +839,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         for(var i=0;i<allTriggers.length;i++){
           _this.liveRenderRefresh(allTriggers[i]);
         }
-      }
+      };
 
       this.liveRenderRefresh = function(trigger){
         if(!trigger.selector) return;
@@ -844,7 +847,8 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         var isSelectorFunc = (typeof(trigger.selector) === 'function');
         var nodes = (isSelectorFunc ? trigger.selector() : _this.queryWithParent(trigger.options.container, trigger.selector)) || [];
         var newNodes = [];
-        for(var i=0;i<nodes.length;i++){
+        var i;
+        for(i=0;i<nodes.length;i++){
           var foundNode = false;
           for(var j=0;j<trigger.lastNodes.length;j++){
             if(nodes[i]==trigger.lastNodes[j]){ foundNode = true; break; }
@@ -852,7 +856,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
           if(!foundNode) newNodes.push(nodes[i]);
         }
         trigger.lastNodes = nodes;
-        for(var i=0;i<newNodes.length;i++){
+        for(i=0;i<newNodes.length;i++){
           var obj = newNodes[i];
           if(trigger.options.addClass){
             if(obj.classList.contains('jshcms_rendered_'+trigger.id)) continue;
@@ -860,7 +864,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
           }
           trigger.action(obj);
         }
-      }
+      };
 
       this.liveRender = function(sel, action, options, onComplete){
         action = action || function(){};
@@ -887,8 +891,9 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         _this.execIf(!options.immediate, function(next){ setTimeout(next, 0); }, function(){
           if(observer) observer.disconnect();
           _this.liveRenderRefreshAll();
-          for(var i=0;i<_this.liveRenderTriggers.length;i++) _this.liveRenderTriggers[i].onComplete();
-          for(var i=0;i<_this.liveRenderTriggers.length;i++){
+          var i;
+          for(i=0;i<_this.liveRenderTriggers.length;i++) _this.liveRenderTriggers[i].onComplete();
+          for(i=0;i<_this.liveRenderTriggers.length;i++){
             var triggerClass = 'jshcms_rendered_'+_this.liveRenderTriggers[i].id;
             var triggerObjects = _this.queryWithParent(options.container, '.'+triggerClass);
             for(var j=0;j<triggerObjects.length;j++) triggerObjects[j].classList.remove(triggerClass);
@@ -896,7 +901,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
           _this.liveRenderTriggers = [];
           _this.liveRenderActive = false;
         });
-      }
+      };
 
       //Containerless
       //-----------
@@ -904,12 +909,12 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
       this.isContainerless = function(obj){
         if(obj && obj.id && _this.beginsWith(obj.id, 'jshcms-insert-divider-') && _this.endsWith(obj.id, '-start')) return true;
         return false;
-      }
+      };
 
       this.getContainerlessId = function(obj){
         if(_this.isContainerless(obj)) return obj.id.substr(('jshcms-insert-divider-').length).slice(0, -1*('-start').length);
         return undefined;
-      }
+      };
 
       this.getContainerlessChildren = function(dividerId){
         var dividerStartNode = document.getElementById('jshcms-insert-divider-'+dividerId+'-start');
@@ -931,7 +936,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
           }
         }
         return children;
-      }
+      };
 
       this.removeContainerless = function(dividerId, removeContainer){
         var dividerStartNode = document.getElementById('jshcms-insert-divider-'+dividerId+'-start');
@@ -956,7 +961,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
             }
           }
         }
-      }
+      };
 
       this.replaceContainerlessContent = function(dividerId, html){
         _this.removeContainerless(dividerId, false);
@@ -964,7 +969,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         if(dividerStartNode){
           _this.appendHtml(dividerStartNode, html, null, 'afterend');
         }
-      }
+      };
 
       this.convertToContainerless = function(dividerId, obj){
         obj.insertAdjacentHTML('beforebegin', '<script id="jshcms-insert-divider-'+dividerId+'-start" jshcms-ignore-first-render="true"></script>');
@@ -978,7 +983,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         while (obj.firstChild) objParent.insertBefore(obj.firstChild, obj);
         objParent.removeChild(obj);
         return document.getElementById('jshcms-insert-divider-'+dividerId+'-start');
-      }
+      };
 
       //Utility - Path
       //--------------
@@ -991,7 +996,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         while(a.length && ((aEnd=='/')||(aEnd=='\\'))){ a = a.substr(0,a.length-1); if(a.length) aEnd=a[a.length-1]; }
         while(b.length && ((bStart=='/')||(bStart=='\\'))){ b = b.substr(1); if(b.length) bStart=b[0]; }
         return a + '/' + b;
-      }
+      };
 
       this.getExtension = function(path){
         if(!path) return '';
@@ -1004,14 +1009,14 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         var lastDot = path.lastIndexOf('.');
         if(lastDot >= 0) path = path.substr(lastDot);
         return path;
-      }
+      };
 
       this.getUrlParts = function(url){
         if(!url) url = '';
         var a = document.createElement('a');
         a.href = url;
         return a;
-      }
+      };
 
       //Utility - JS Extensions
       //-----------------------
@@ -1030,7 +1035,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
           if(arr[i]==val) return true;
         }
         return false;
-      }
+      };
 
       this.map = function(arr, f){
         var rslt = [];
@@ -1038,11 +1043,11 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
           rslt.push(f(arr[i]));
         }
         return rslt;
-      }
+      };
 
-      this.endsWith = function (str, suffix, caseInsensitive) { if(caseInsensitive){ str = (str||'').toLowerCase(); suffix = (suffix||'').toLowerCase(); } return (str||'').toString().match(suffix + "$") == suffix; }
+      this.endsWith = function (str, suffix, caseInsensitive) { if(caseInsensitive){ str = (str||'').toLowerCase(); suffix = (suffix||'').toLowerCase(); } return (str||'').toString().match(suffix + '$') == suffix; };
 
-      this.beginsWith = function (str, prefix, caseInsensitive) { if(caseInsensitive){ str = (str||'').toLowerCase(); prefix = (prefix||'').toLowerCase(); } return (str||'').toString().indexOf(prefix) === 0; }
+      this.beginsWith = function (str, prefix, caseInsensitive) { if(caseInsensitive){ str = (str||'').toLowerCase(); prefix = (prefix||'').toLowerCase(); } return (str||'').toString().indexOf(prefix) === 0; };
 
       this.trimToken = function (str, token, dir, cnt, caseInsensitive) {
         if(dir=='start') dir = 1;
@@ -1055,14 +1060,14 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
           if(cnt > 0) cnt--;
         }
         return str;
-      }
+      };
 
-      this.replaceAll = function (val, find, replace) { return val.split(find).join(replace); }
+      this.replaceAll = function (val, find, replace) { return val.split(find).join(replace); };
 
       this.evalWindow = function(code){
         if (window.execScript) return window.execScript(code);
         (function() { window.eval.call(window, code); })();
-      }
+      };
 
       this.evalJS = function(str, _thisobj, params){
         if(!_thisobj) _thisobj = window;
@@ -1075,13 +1080,14 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         }
         var jscmd = '(function(){'+paramstr+'return (function(){'+str+'})();}).call(_thisobj)';
         return eval(jscmd);
-      }
+      };
 
       this.eachParallel = function(arr, f, callback){
         var f_complete = [];
         var err_returned = false;
-        for(var i=0;i<arr.length;i++) f_complete.push(false);
-        for(var i=0;i<arr.length;i++){
+        var i;
+        for(i=0;i<arr.length;i++) f_complete.push(false);
+        for(i=0;i<arr.length;i++){
           (function(){
             var idx = i;
             f(arr[idx], idx, function(err){
@@ -1099,13 +1105,13 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
             });
           })();
         }
-      }
+      };
 
       this.pad = function(val, padding, length) {
         var rslt = val.toString();
         while (rslt.length < length) rslt = padding + rslt;
         return rslt;
-      }
+      };
 
       this.chain = function (orig_f, f) {
         if (!orig_f) return f;
@@ -1114,12 +1120,12 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
           if(typeof rslt != 'undefined') return rslt;
           return orig_f.apply(this, arguments);
         };
-      }
+      };
 
       this.execIf = function (cond, apply, f) {
         if (cond) apply(f);
         else f();
-      }
+      };
 
       //Utility - Network
       //-----------------
@@ -1150,7 +1156,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
           return callback(new Error('Connection Error'));
         };
         req.send();
-      }
+      };
 
       this.loadScript = function(url, cb){
         var script = document.createElement('script');
@@ -1158,7 +1164,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         script.src = url;
         if(script.classList) script.classList.add('removeOnPublish');
         document.head.appendChild(script);
-      }
+      };
 
       this.loadScriptSync = function(url){
         var req = new XMLHttpRequest();
@@ -1176,20 +1182,20 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
           throw new Error('Connection Error loading script "'+url+'"');
         };
         req.send();
-      }
+      };
 
       this.parseGET = function (qs) {
         if (typeof qs == 'undefined') qs = window.location.search;
-        if (qs == "" || qs.length == 1) return {};
+        if (qs == '' || qs.length == 1) return {};
         if (qs[0] == '?' || qs[0] == '#') qs = qs.substr(1);
         var qsa = qs.split('&');
         var b = {};
         for (var i = 0; i < qsa.length; i++) {
           var p = qsa[i].split('=', 2);
           if (p.length == 1)
-            b[p[0]] = "";
+            b[p[0]] = '';
           else
-            b[p[0]] = decodeURIComponent(p[1].replace(/\+/g, " "));
+            b[p[0]] = decodeURIComponent(p[1].replace(/\+/g, ' '));
         }
         return b;
       };
@@ -1199,6 +1205,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
 
       this.appendHtml = function(container, html, dividerId, position){
         if(!container) return;
+        var i;
         //Insert script as a boundary
         var saveDivider = !!dividerId;
         if(!dividerId) dividerId = ++_this.cntInsertDivider;
@@ -1208,10 +1215,10 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
           '<script id="jshcms-insert-divider-'+dividerId+'-end"></script>',
         ];
         if((position=='afterbegin')||(position=='afterend')) {
-          for(var i=newHtml.length-1;i>=0;i--) container.insertAdjacentHTML(position, newHtml[i]);
+          for(i=newHtml.length-1;i>=0;i--) container.insertAdjacentHTML(position, newHtml[i]);
         }
         else {
-          for(var i=0;i<newHtml.length;i++) container.insertAdjacentHTML(position, newHtml[i]);
+          for(i=0;i<newHtml.length;i++) container.insertAdjacentHTML(position, newHtml[i]);
         }
 
         //Find the script, put all new nodes into an array, and remove the script
@@ -1219,7 +1226,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         var newNodes = [];
         var dividerStartNode = null;
         var dividerEndNode = null;
-        for(var i=0;i<container.childNodes.length;i++){
+        for(i=0;i<container.childNodes.length;i++){
           var node = container.childNodes[i];
           if(!node) continue;
           if(!dividerStartNode){
@@ -1257,7 +1264,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         );
 
         //Execute scripts
-        for(var i=0;i<scriptNodes.length;i++){
+        for(i=0;i<scriptNodes.length;i++){
           var scriptNode = scriptNodes[i];
           var scriptBody = (scriptNode.textContent || '').trim();
           var scriptType = (scriptNode.getAttribute('type') || '').trim();
@@ -1280,19 +1287,19 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
             _this.evalWindow(scriptBody);
           }
         }
-      }
+      };
 
       this.queryWithParent = function(elem, sel){
         var matches = (Element.prototype.matches || Element.prototype.msMatchesSelector || Element.prototype.webkitMatchesSelector);
         var rslt = Array.prototype.slice.call((elem||document).querySelectorAll(sel));
         if(elem && matches.call(elem, sel)) rslt.push(elem);
         return rslt;
-      }
+      };
 
       this.removeElement = function(id){
         var elem = document.getElementById(id);
         if(elem && elem.parentNode) elem.parentNode.removeChild(elem);
-      }
+      };
 
       this.appendCss = function(id, css){
         var style = document.createElement('style');
@@ -1301,17 +1308,17 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         if(id) style.id = id;
         style.appendChild(document.createTextNode(css));
         document.head.appendChild(style);
-      }
+      };
 
       this.appendRenderCss = function(){
         _this.appendCss('jshcms_render_styles', ['.jshcms_onrender_hide { display: none !important; }'].join(''));
-      }
+      };
 
       this.appendTag = function(container, tagtype, attributes){
         var tag = document.createElement(tagtype);
         for(var key in attributes) tag[key] = attributes[key];
         container.appendChild(tag);
-      }
+      };
 
       this.appendIframe = function(container, id, url){
         var obj = document.createElement('iframe');
@@ -1327,11 +1334,11 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         obj.style.zIndex = 2147483643;
         obj.src = url;
         container.appendChild(obj);
-      }
+      };
 
       this.fade = function(id, obj, direction, duration, delay, step){
         if(id in _this.timers) window.clearTimeout(_this.timers[id]);
-        if(delay){ _this.timers[id] = setTimeout(function(){ _this.fade(id, obj, direction, duration, 0, step) }, delay); return; }
+        if(delay){ _this.timers[id] = setTimeout(function(){ _this.fade(id, obj, direction, duration, 0, step); }, delay); return; }
         var FRAMES = (duration / 100);
         if(typeof step == 'undefined') step = Math.round(((direction==1) ? obj.style.opacity : (1-obj.style.opacity)) * FRAMES);
         obj.style.opacity = (direction==1) ? (step / FRAMES) : (1 - step / FRAMES);
@@ -1341,10 +1348,10 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
         else {
           _this.timers[id] = setTimeout(function(){ _this.fade(id, obj, direction, duration, 0, step+1); }, duration / FRAMES);
         }
-      }
+      };
 
-      this.fadeIn = function(id, obj, duration, delay, step){ _this.fade(id, obj, 1, duration, delay, step); }
-      this.fadeOut = function(id, obj, duration, delay, step){ _this.fade(id, obj, -1, duration, delay, step); }
+      this.fadeIn = function(id, obj, duration, delay, step){ _this.fade(id, obj, 1, duration, delay, step); };
+      this.fadeOut = function(id, obj, duration, delay, step){ _this.fade(id, obj, -1, duration, delay, step); };
 
       //Utility - Loader
       //----------------
@@ -1404,7 +1411,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
             { addClass: false }
           );
         }
-      }
+      };
 
       this.stopLoading = function(obj){
         for(var i=0;i<this.loadQueue.length;i++){ if(obj===this.loadQueue[i]){ this.loadQueue.splice(i, 1); i--; } }
@@ -1412,7 +1419,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
     
         this.isLoading = false;
         _this.fadeOut('jsHarmonyCMSClientLoading', document.getElementById('jsHarmonyCMSClientLoading'), 500);
-      }
+      };
 
       //Bind Events
       //-----------
@@ -1440,7 +1447,7 @@ along with this package.  If not, see <http://www.gnu.org/licenses/>.
   var sysGlobal = ((typeof global != 'undefined') && global) || sysSelf;
   var sysModule = (typeof module != 'undefined') && module;
 
-  if(sysModule) sysModule.exports = exports = jsHarmonyCmsClient;
+  if(sysModule) sysModule.exports = exports = jsHarmonyCmsClient; // eslint-disable-line no-undef
   if(!('jsHarmonyCmsClient' in sysGlobal)) sysGlobal.jsHarmonyCmsClient = jsHarmonyCmsClient;
   if(!('jsHarmonyCmsClient' in sysSelf)) sysSelf.jsHarmonyCmsClient = jsHarmonyCmsClient;
   return jsHarmonyCmsClient;
